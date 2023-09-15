@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { EthProofOfStakeController } from './plugin/eth-proof-of-stake/eth-proof-of-stake.controller';
 
 @Module({
   imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [EthProofOfStakeController],
+  providers: [],
 })
 export class AppModule {}
