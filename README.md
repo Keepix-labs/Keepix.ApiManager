@@ -2,7 +2,26 @@
 
 #### Pre-requires
 
-node v18.16.0
+`node v18.16.0`
+
+#### Installation
+
+`npm install`
+
+#### Debug Server
+
+`npm run start`
+
+#### Build
+
+`npm run build`
+
+#### Deploy to Production
+
+1. Run the build step.
+2. copy the dist/ directory on the destination device.
+3. run the following command line on the destination device: `node main.js`
+4. go to http://localhost:3000
 
 #### Plugin Creation and Management
 
