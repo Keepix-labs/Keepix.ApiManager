@@ -1,0 +1,87 @@
+---
+- name: Configure Wireless Access Point
+  hosts: localhost
+  become: yes
+  vars:
+    ssid: "{{ ssid }}"
+    wpa_passphrase: "{{ wpa_passphrase }}"
+  tasks:
+    - name: Install necessary packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - hostapd
+        - isc-dhcp-server
+
+    - name: Configure DHCP server
+      lineinfile:
+        path: /etc/dhcp/dhcpd.conf
+        line: "{{ item }}"
+      loop:
+        - "subnet 192.168.1.0 netmask 255.255.255.0 {"
+        - "  range 192.168.1.10 192.168.1.50;"
+        - "  option broadcast-address 192.168.1.255;"
+        - "  option routers 192.168.1.1;"
+        - "  default-lease-time 600;"
+        - "  max-lease-time 7200;"
+        - "  option domain-name \"local\";"
+        - "  option domain-name-servers 8.8.8.8, 8.8.4.4;"
+        - "}"
+        
+
+    - name: Configure network interface
+      lineinfile:
+        path: /etc/network/interfaces
+        line: "{{ item }}"
+      loop:
+        - "allow-hotplug wlan0"
+        - "iface wlan0 inet static"
+        - "address 192.168.1.1"
+        - "netmask 255.255.255.0"
+
+    - name: Restart networking service
+      service:
+        name: networking
+        state: restarted
+
+    - name: Set static IP address
+      command: ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0
+
+    - name: Configure hostapd
+      copy:
+        dest: /etc/hostapd/hostapd.conf
+        content: |
+            interface=wlan0
+            ssid={{ ssid }}
+            hw_mode=g
+            channel=6
+            macaddr_acl=0
+            auth_algs=1
+            ignore_broadcast_ssid=0
+            wpa=2
+            wpa_passphrase={{ wpa_passphrase }}
+            wpa_key_mgmt=WPA-PSK
+            wpa_pairwise=TKIP
+            rsn_pairwise=CCMP
+
+    - name: Update hostapd configuration file path
+      lineinfile:
+        path: /etc/default/hostapd
+        line: "DAEMON_CONF='/etc/hostapd/hostapd.conf'"
+
+    - name: Start hostapd and dhcp server services
+      service:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - isc-dhcp-server
+        - hostapd
+
+    - name: Enable hostapd and dhcp server at boot
+      service:
+        name: "{{ item }}"
+        enabled: yes
+      loop:
+        - hostapd
+        - isc-dhcp-server
