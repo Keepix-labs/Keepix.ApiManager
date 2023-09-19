@@ -1,7 +1,0 @@
----
-- name: Connect to Wi-Fi Network
-  hosts: localhost
-  become: yes
-  tasks:
-    - name: Connect to Wi-Fi Network
-      command: nmcli dev wifi connect "{{ ssid }}" password "{{ password }}" iface wlan0
