@@ -4,7 +4,7 @@
   "description": "",
   "author": "",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "pull-submodules": "git submodule update --init --recursive",
     "build": "npm run pull-submodules && nest build",
