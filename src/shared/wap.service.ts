@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import * as schedule from 'node-schedule';
 import { EthernetService } from "./ethernet.service";
 import * as moment from "moment";
-import { BashService } from "./bash.service";
 import * as fs from 'fs';
+import { AnsibleService } from "./ansible.service";
 
 @Injectable()
 export class WapService {
@@ -16,14 +15,7 @@ export class WapService {
 
     constructor(
         private ethernetService: EthernetService,
-        private bashService: BashService) {
-        this.schedule();
-    }
-
-    schedule() {
-        schedule.scheduleJob('*/1 * * * *' /* 1min */, () => {
-            this.run();
-        });
+        private ansibleService: AnsibleService) {
     }
 
     loadDynamicWapConfig() {
@@ -49,6 +41,7 @@ export class WapService {
         if (this.running) { // skip duplicate running.
             return ;
         }
+        console.log(`Wap Service Running`);
         this.running = true;
         try {
             this.loadDynamicWapConfig();
@@ -58,8 +51,14 @@ export class WapService {
                 && !this.ethernetService.isAlive
                 && moment(this.ethernetService.lastTimeAlive).add(1, 'minute').isBefore(moment())    
             ) {
-                const resultOfExec = await this.bashService.execWrapper(`ansible-playbook "${__dirname}/../yml/setup_wap.yml" --extra-vars "ssid=${this.ssid} wpa_passphrase=${this.wpa_passphrase}"`);
-                console.log('WAP START', resultOfExec);
+                const ansibleResult = await this.ansibleService.run(
+                    `setup_wap`,
+                    {
+                        ssid: this.ssid,
+                        wpa_passphrase: this.wpa_passphrase
+                    }
+                );
+                console.log('WAP START', ansibleResult);
                 this.isAlive = true;
             }
 
@@ -67,8 +66,8 @@ export class WapService {
             if (this.isAlive
                 && this.ethernetService.isAlive
             ) {
-                const resultOfExec = await this.bashService.execWrapper(`ansible-playbook "${__dirname}/../yml/remove_wap.yml"`);
-                console.log('WAP STOP', resultOfExec);
+                const ansibleResult = await this.ansibleService.run(`remove_wap`);
+                console.log('WAP STOP', ansibleResult);
                 this.isAlive = false;
             }
 
@@ -79,5 +78,6 @@ export class WapService {
             this.saveDynamicWapConfig();
         }
         this.running = false;
+        console.log(`Wap Service Running Finished`);
     }
 }
