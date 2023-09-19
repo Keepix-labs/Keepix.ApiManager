@@ -24,7 +24,7 @@ export class AnsibleService {
         const process = await this.bashService.spawn(
             `/usr/bin/ansible-playbook`,
             [
-                `"${__dirname}/../yml/${ansibleScriptName}.yml"`,
+                `"${__dirname}/../Keepix.AutomationScripts/${ansibleScriptName}.yml"`,
                 Object.keys(ansibleExtraArgs).length > 0 ? `--extra-vars` : undefined,
                 Object.keys(ansibleExtraArgs).length > 0 ? Object.entries(ansibleExtraArgs).map(x => `${x[0]}=${x[1]}`).join(' ') : undefined
             ].filter(x => x != undefined));
