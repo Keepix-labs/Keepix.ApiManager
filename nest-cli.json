@@ -6,7 +6,7 @@
     "deleteOutDir": true,
     "plugins": ["@nestjs/swagger"],
     "assets": [
-      { "include": "./Keepix.AutomationScripts", "outDir": "dist", "watchAssets": true }
+      { "include": "../Keepix.AutomationScripts", "outDir": "dist/Keepix.AutomationScripts", "watchAssets": true }
     ]
   }
 }

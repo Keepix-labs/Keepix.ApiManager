@@ -1,0 +1,3 @@
+[submodule "Keepix.AutomationScripts"]
+	path = Keepix.AutomationScripts
+	url = https://github.com/Keepix-labs/Keepix.AutomationScripts.git
