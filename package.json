@@ -7,9 +7,9 @@
   "license": "UNLICENSED",
   "scripts": {
     "pull-submodules": "git submodule update --init --recursive",
-    "build": "nest build",
+    "build": "npm run pull-submodules && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "npm run pull-submodules && nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
