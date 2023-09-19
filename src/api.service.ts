@@ -1,6 +1,7 @@
 import * as schedule from 'node-schedule';
 import { Injectable } from "@nestjs/common";
 import { BashService } from './shared/bash.service';
+import { WapService } from './shared/wap.service';
 
 @Injectable()
 export class ApiService {
@@ -8,7 +9,9 @@ export class ApiService {
     private title: string = "[Keepix-Scheduler] -";
     private verbose: boolean = false;
 
-    constructor(private bashService: BashService) {
+    constructor(
+        private bashService: BashService,
+        private wapService: WapService) {
         this.schedule();
     }
 
