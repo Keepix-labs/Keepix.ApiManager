@@ -3,10 +3,23 @@ import { BashService } from './bash.service';
 import { EthernetService } from './ethernet.service';
 import { WapService } from './wap.service';
 import { AnsibleService } from './ansible.service';
+import { WifiService } from './wifi.service';
 
 @Module({
   controllers: [],
-  providers: [BashService, EthernetService, WapService, AnsibleService],
-  exports: [BashService, EthernetService, WapService, AnsibleService]
+  providers: [
+    BashService,
+    EthernetService,
+    WapService,
+    AnsibleService,
+    WifiService
+  ],
+  exports: [
+    BashService,
+    EthernetService,
+    WapService,
+    AnsibleService,
+    WifiService
+  ]
 })
 export class SharedModule {}

@@ -9,7 +9,7 @@ export class EthProofOfStakeController {
     constructor(
         private ansibleService: AnsibleService,
         private ethProofOfStakeService: EthProofOfStakeService) {
-
+        
     }
 
     @Get('status')
@@ -32,6 +32,8 @@ export class EthProofOfStakeController {
                     // TODO extra args
                 }
             );
+
+
         }
 
         return settings.amount;

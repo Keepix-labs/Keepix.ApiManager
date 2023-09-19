@@ -7,7 +7,7 @@ export class EthProofOfStakeService {
     // public status = '';
 
     constructor(bashService: BashService) {
-
+        
     }
 
 }

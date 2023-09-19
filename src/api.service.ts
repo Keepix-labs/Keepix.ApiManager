@@ -4,6 +4,7 @@ import { BashService } from './shared/bash.service';
 import { WapService } from './shared/wap.service';
 import { EthernetService } from './shared/ethernet.service';
 import * as moment from 'moment';
+import { WifiService } from './shared/wifi.service';
 
 @Injectable()
 export class ApiService {
@@ -13,6 +14,7 @@ export class ApiService {
 
     constructor(
         private bashService: BashService,
+        private wifiService: WifiService,
         private ethernetService: EthernetService,
         private wapService: WapService) {
     }
@@ -30,6 +32,7 @@ export class ApiService {
 
     async run() {
         console.log(`${this.title} Run`);
+        await this.wifiService.run();
         await this.ethernetService.run();
         await this.wapService.run();
     }

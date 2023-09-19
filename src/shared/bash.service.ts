@@ -6,7 +6,7 @@ import { BehaviorSubject } from "rxjs";
 @Injectable()
 export class BashService {
 
-    async execWrapper(commandLine: string) {
+    async execWrapper(commandLine: string): Promise<string> {
         return new Promise((resolve, reject) => {
             exec(commandLine, (error, stdout, stderr) => {
                 if (error) {

@@ -15,15 +15,13 @@ export class EthernetService {
             if (request.status == 200) {
                 this.isAlive = true;
                 this.lastTimeAlive = (new Date()).getTime();
-                console.log('ETHERNET IsAlive=', this.isAlive);
             } else {
                 this.isAlive = false;
-                console.log('ETHERNET IsAlive=', this.isAlive);
             }
         } catch (e) {
             this.isAlive = false;
-            console.log('ETHERNET IsAlive=', this.isAlive);
         }
+        console.log('ETHERNET IsAlive=', this.isAlive);
         console.log(`Ethernet Service Running Finished`);
     }
 
