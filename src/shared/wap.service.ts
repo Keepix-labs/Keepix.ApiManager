@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import * as schedule from 'node-schedule';
 import { EthernetService } from "./ethernet.service";
-import moment from "moment";
+import * as moment from "moment";
 import { BashService } from "./bash.service";
 import * as fs from 'fs';
 
