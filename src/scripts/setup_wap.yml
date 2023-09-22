@@ -13,9 +13,10 @@
     # Configuration de l'interface Wi-Fi en mode hotspot
     - name: Configure interface for hotspot
       command: >
-        /sbin/ifconfig {{ wifi_interface }} down &&
-        /sbin/iwconfig {{ wifi_interface }} mode ad-hoc &&
-        /sbin/ifconfig {{ wifi_interface }} 192.168.1.1 netmask 255.255.255.0 up
+        ip link set {{ wifi_interface }} down
+        ip link set {{ wifi_interface }} mode ad-hoc
+        ip link set {{ wifi_interface }} Update
+        ip address add 192.168.1.1/24 dev {{ wifi_interface }}
       become: yes
 
     # Installation et configuration du serveur DHCP
