@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { BashService } from "./bash.service";
 import { AnsibleService } from "./ansible.service";
-import { WapService } from "./wap.service";
 
 @Injectable()
 export class WifiService {
@@ -15,8 +14,7 @@ export class WifiService {
 
     constructor(
         private bashService: BashService,
-        private ansibleService: AnsibleService,
-        private wapService: WapService) {}
+        private ansibleService: AnsibleService) {}
 
     async run() {
         console.log(`Wifi Service Running`);
@@ -50,8 +48,7 @@ export class WifiService {
         this.ssid = ssid;
         this.password = password;
 
-        // stop wap
-        await this.wapService.stop();
+        await this.ansibleService.run('remove_wap', {});
 
         const ansibleResult = await this.ansibleService.run('wifi-connection', {
             ssid: this.ssid,
@@ -59,7 +56,7 @@ export class WifiService {
         });
 
         if (ansibleResult.exitCode != 0) {
-            await this.wapService.start();
+            await this.ansibleService.run('setup_wap', {});
             return false;
         }
 
