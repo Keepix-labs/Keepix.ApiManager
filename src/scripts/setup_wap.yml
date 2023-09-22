@@ -22,6 +22,7 @@
         dest: /etc/accesspoint/hostapd.config
       become: yes
 
+    # ENABLE SHARE of HOST
     - name: Configure network interface
       lineinfile:
         path: /etc/network/interfaces
@@ -31,6 +32,10 @@
         - "iface wlan0 inet static"
         - "address 192.168.1.1"
         - "netmask 255.255.255.0"
+
+    # ENABLE SHARE of HOST
+    - name: Set static IP address 
+      command: ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0
 
     - name: Restart networking service
       service:
