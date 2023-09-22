@@ -22,6 +22,21 @@
         dest: /etc/accesspoint/hostapd.config
       become: yes
 
+    - name: Configure network interface
+      lineinfile:
+        path: /etc/network/interfaces
+        line: "{{ item }}"
+      loop:
+        - "allow-hotplug wlan0"
+        - "iface wlan0 inet static"
+        - "address 192.168.1.1"
+        - "netmask 255.255.255.0"
+
+    - name: Restart networking service
+      service:
+        name: networking
+        state: restarted
+
     - name: Start accesspoint
       command: pyaccesspoint --config start
       become: yes
