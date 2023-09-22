@@ -45,3 +45,4 @@
     - name: Start accesspoint
       command: pyaccesspoint --config start
       become: yes
+      ignore_errors: yes
