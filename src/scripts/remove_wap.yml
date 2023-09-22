@@ -4,10 +4,6 @@
   become: yes
   tasks:
 
-    - name: Stop accesspoint
-      command: pyaccesspoint --config -v stop
-      become: yes
-
     - name: Remove WAP configuration from network interfaces
       replace:
         path: /etc/network/interfaces
@@ -22,3 +18,7 @@
       service:
         name: networking
         state: restarted
+
+    - name: Stop accesspoint
+      command: pyaccesspoint --config -v stop
+      become: yes
