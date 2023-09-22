@@ -35,11 +35,9 @@ export class ApiService {
     async run() {
         console.log(`${this.title} Run`);
 
-        await (new Promise((resolve) => { setTimeout(() => resolve(true), 1000); }))
-        console.log(await this.ansibleService.run('test'));
-        // await this.wifiService.run();
-        // await this.ethernetService.run();
-        // await this.wapService.run();
+        await this.wifiService.run();
+        await this.ethernetService.run();
+        await this.wapService.run();
     }
 
     log(... args) { if (this.verbose) console.log(... args); }

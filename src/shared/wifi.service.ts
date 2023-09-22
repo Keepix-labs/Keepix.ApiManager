@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { BashService } from "./bash.service";
+import { AnsibleService } from "./ansible.service";
 
 @Injectable()
 export class WifiService {
@@ -8,7 +9,12 @@ export class WifiService {
     public hotspotEnabled: boolean = false;
     public lastTimeAlive: number = 0;
 
-    constructor(private bashService: BashService) {}
+    private ssid: string = undefined;
+    private password: string = undefined;
+
+    constructor(
+        private bashService: BashService,
+        private ansibleService: AnsibleService) {}
 
     async run() {
         console.log(`Wifi Service Running`);
@@ -36,5 +42,16 @@ export class WifiService {
         }
         console.log(`WIFI IsConnected=${this.isConnected}, HotSpotEnabled=${this.hotspotEnabled}`);
         console.log(`Wifi Service Running Finished`);
+    }
+
+    async connect(ssid: string, password: string) {
+        this.ssid = ssid;
+        this.password = password;
+
+        const ansibleResult = await this.ansibleService.run('wifi-connection', {
+            ssid: this.ssid,
+            password: this.password
+        });
+        return ansibleResult.exitCode == 0;
     }
 }

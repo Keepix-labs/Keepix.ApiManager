@@ -11,7 +11,7 @@ import * as hostapd from "wireless-tools/hostapd";
 export class WapService {
 
     private ssid: string = 'keepix';
-    private wpa_passphrase: string = 'keepix';
+    private wpa_passphrase: string = 'keepixpassword1234';
     private running: boolean = false;
     private dhcpServer: any = undefined;
 
@@ -38,28 +38,14 @@ export class WapService {
                 if (this.dhcpServer == undefined) {
                     this.createServerDHCP();
                 }
-                const options = {
-                    channel: 6,
-                    driver: 'rtl871xdrv',
-                    hw_mode: 'g',
-                    interface: 'wlan0',
-                    ssid: 'RaspberryPi',
-                    wpa: 2,
-                    wpa_passphrase: 'keepixkeepix1234'
-                };
-                   
-                hostapd.enable(options, (err) => {
-                    console.log('HOSTAPD CREATED', err);
-                    // the access point was created
-                });
-                // const ansibleResult = await this.ansibleService.run(
-                //     `setup_wap`,
-                //     {
-                //         ssid: this.ssid,
-                //         wpa_passphrase: this.wpa_passphrase
-                //     }
-                // );
-                console.log('WAP START');
+                const ansibleResult = await this.ansibleService.run(
+                    `setup_wap`,
+                    {
+                        ssid: this.ssid,
+                        wpa_passphrase: this.wpa_passphrase
+                    }
+                );
+                console.log('WAP START', ansibleResult.exitCode == 0);
             }
             // when internet alive stop wap.
             if (this.wifiService.hotspotEnabled
