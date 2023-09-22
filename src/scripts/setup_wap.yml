@@ -1,131 +1,101 @@
 ---
-- name: Configure Wireless Access Point
+- name: Configure Hotspot Wi-Fi
   hosts: localhost
   become: yes
   vars:
-    ssid: "{{ ssid }}"
+    ssid: "Keepix"  # Remplacez par le SSID de votre choix
+    wifi_interface: wlan0  # Remplacez par le nom de votre interface Wi-Fi
+    web_server_ip: 192.168.1.1  # Adresse IP du serveur web
+    web_server_port: 3000  # Port du serveur web
+
   tasks:
 
-    # STOP WIFI IF CONNECTED
+    # Configuration de l'interface Wi-Fi en mode hotspot
+    - name: Configure interface for hotspot
+      command: >
+        /sbin/ifconfig {{ wifi_interface }} down &&
+        /sbin/iwconfig {{ wifi_interface }} mode ad-hoc &&
+        /sbin/ifconfig {{ wifi_interface }} 192.168.1.1 netmask 255.255.255.0 up
+      become: yes
 
-    - name: Check if connected to Wi-Fi
-      command: iwgetid -r
-      register: wifi_ssid
-      ignore_errors: yes
+    # Installation et configuration du serveur DHCP
+    - name: Install DHCP server
+      apt:
+        name: isc-dhcp-server
+        state: present
+      become: yes
 
-    - name: Disconnect from Wi-Fi if connected
-      command: nmcli connection down "{{ wifi_ssid.stdout }}"
-      when: wifi_ssid.stdout is defined
-      ignore_errors: yes
+    - name: Configure DHCP server
+      template:
+        src: dhcpd.conf.j2
+        dest: /etc/dhcp/dhcpd.conf
+      become: yes
 
-    # Interface
-
-    - name: Configure network interface
+    - name: Set DHCP server interface
       lineinfile:
-        path: /etc/network/interfaces
-        line: "{{ item }}"
-      loop:
-        - "allow-hotplug wlan0"
-        - "iface wlan0 inet static"
-        - "address 192.168.1.1"
-        - "netmask 255.255.255.0"
+        path: /etc/default/isc-dhcp-server
+        regexp: "^INTERFACESv4="
+        line: "INTERFACESv4=\"{{ wifi_interface }}\""
+      become: yes
 
-    - name: Restart networking service
+    - name: Restart DHCP server
       service:
-        name: networking
+        name: isc-dhcp-server
         state: restarted
+      become: yes
 
-    # Hostapd
+    # Configuration du partage de connexion (redirection du trafic HTTP)
+    - name: Configure IP forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        state: present
+        sysctl_set: yes
+      become: yes
 
-    - name: Stop hostapd server services
-      service:
-        name: "{{ item }}"
-        state: stopped
-      loop:
-        - hostapd
+    - name: Redirect HTTP traffic to web server
+      iptables:
+        table: nat
+        chain: PREROUTING
+        in_interface: "{{ wifi_interface }}"
+        protocol: tcp
+        destination_port: 80
+        jump: DNAT
+        to_destination: "{{ web_server_ip }}:{{ web_server_port }}"
+      become: yes
 
-    - name: Unmask hostapd server services
-      service:
-        name: "{{ item }}"
-        state: unmask
-      loop:
-        - hostapd
-      ignore_errors: yes
+    - name: Save iptables rules
+      command: iptables-save > /etc/iptables.ipv4.nat
+      become: yes
+
+    # Installation et configuration de hostapd
+    - name: Install hostapd
+      apt:
+        name: hostapd
+        state: present
+      become: yes
 
     - name: Configure hostapd
-      copy:
+      template:
+        src: hostapd.conf.j2
         dest: /etc/hostapd/hostapd.conf
-        content: |
-            interface=wlan0
-            ssid={{ ssid }}
-            hw_mode=g
-            channel=6
-            macaddr_acl=0
-            auth_algs=1
-            ignore_broadcast_ssid=0
-            wpa=0
+      become: yes
 
     - name: Update hostapd configuration file path
       lineinfile:
         path: /etc/default/hostapd
-        line: "DAEMON_CONF='/etc/hostapd/hostapd.conf'"
+        regexp: "^#DAEMON_CONF="
+        line: "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\""
+      become: yes
 
-    - name: Start hostapd server services
+    - name: Start hostapd service
       service:
-        name: "{{ item }}"
+        name: hostapd
         state: started
-      loop:
-        - hostapd
+      become: yes
 
-    - name: Enable hostapd server at boot
+    - name: Enable hostapd service at boot
       service:
-        name: "{{ item }}"
+        name: hostapd
         enabled: yes
-      loop:
-        - hostapd
-
-    # DHCP
-      
-    - name: Stop dhcp server services
-      service:
-        name: "{{ item }}"
-        state: stopped
-      loop:
-        - isc-dhcp-server
-
-    - name: Unmask dhcp server services
-      service:
-        name: "{{ item }}"
-        state: unmask
-      loop:
-        - isc-dhcp-server
-      ignore_errors: yes
-
-    - name: Configure DHCP server
-      lineinfile:
-        path: /etc/dhcp/dhcpd.conf
-        line: "{{ item }}"
-      loop:
-        - "subnet 192.168.1.0 netmask 255.255.255.0 {"
-        - "  range 192.168.1.10 192.168.1.50;"
-        - "  option broadcast-address 192.168.1.255;"
-        - "  option routers 192.168.1.1;"
-        - "  default-lease-time 600;"
-        - "  max-lease-time 7200;"
-        - "  option domain-name \"local\";"
-        - "  option domain-name-servers 8.8.8.8, 8.8.4.4;"
-        - "}"
-
-    - name: Start dhcp server services
-      service:
-        name: "{{ item }}"
-        state: started
-      loop:
-        - isc-dhcp-server
-
-    - name: Enable dhcp server at boot
-      service:
-        name: "{{ item }}"
-        enabled: yes
-      loop:
-        - isc-dhcp-server
+      become: yes
