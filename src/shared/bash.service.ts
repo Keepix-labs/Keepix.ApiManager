@@ -1,10 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import { exec, spawn } from 'child_process';
-import fs from 'fs';
-import { BehaviorSubject } from "rxjs";
+import * as fs from 'fs';
+import { BehaviorSubject, Subject } from "rxjs";
+import { dirname } from 'path';
 
 @Injectable()
 export class BashService {
+
+    private programDir: string = undefined;
+
+    constructor() {
+        this.programDir = dirname(require.main.filename);
+    }
 
     async execWrapper(commandLine: string): Promise<string> {
         return new Promise((resolve, reject) => {
@@ -31,7 +38,7 @@ export class BashService {
             (
                 executableAbsolutePath,
                 flags,
-                { stdio: ['pipe', 'pipe', 'pipe', 'pipe', fs.openSync('./error.log', 'w')]}
+                { stdio: ['pipe', 'pipe', 'pipe', 'pipe', fs.openSync('./error.log', 'w')]},
             );
 
             childProcess.stdout.on('data', (data) => {
@@ -61,6 +68,7 @@ export class BashService {
                 childProcess.kill('SIGTERM');
             };
         } catch (e) {
+            console.log(e);
             childProcessObject.event.next({ key: 'error', value: e });
             childProcessObject.event.next({ key: 'exit', value: -1 });
         }

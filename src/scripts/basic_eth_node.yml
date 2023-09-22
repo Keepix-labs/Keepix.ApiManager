@@ -1,0 +1,21 @@
+--- # REQUIRE `ansible-galaxy install slingnode.ethereum` available on the Keepix TO RUN!
+- hosts: localhost
+  become: yes
+  gather_facts: yes
+  tasks:
+    - name: Include slingnode.ethereum role
+      include_role:
+        name: slingnode.ethereum
+      vars:
+        deploy_execution: true  # Set to true to deploy execution layer
+        deploy_consensus: true  # Set to true to deploy consensus layer
+        deploy_validator: false  # Set to false as we don't need the validator
+        clients:
+          execution: nethermind  # Use Nethermind for resource-efficient execution
+          consensus: lighthouse   # You can keep Lighthouse for the consensus layer
+        enable_firewall: true  # Adjust firewall settings as needed
+        network: mainnet  # Change to the Ethereum network you want to connect to
+        consensus_checkpoint_sync_enabled: true  # Enable or disable checkpoint sync
+        consensus_checkpoint_sync_url: https://sync-mainnet.beaconcha.in  # Adjust URL if needed
+        suggested_fee_recipient: "0xa10214731A6D9eC03d36d1437796D1cEe6a061f7"  # Your fee recipient address
+        graffiti: "My Ethereum Node"  # Your custom graffiti

@@ -5,6 +5,7 @@ import { WapService } from './shared/wap.service';
 import { EthernetService } from './shared/ethernet.service';
 import * as moment from 'moment';
 import { WifiService } from './shared/wifi.service';
+import { AnsibleService } from './shared/ansible.service';
 
 @Injectable()
 export class ApiService {
@@ -16,7 +17,8 @@ export class ApiService {
         private bashService: BashService,
         private wifiService: WifiService,
         private ethernetService: EthernetService,
-        private wapService: WapService) {
+        private wapService: WapService,
+        private ansibleService: AnsibleService) {
     }
 
     schedule() {
@@ -32,9 +34,12 @@ export class ApiService {
 
     async run() {
         console.log(`${this.title} Run`);
-        await this.wifiService.run();
-        await this.ethernetService.run();
-        await this.wapService.run();
+
+        await (new Promise((resolve) => { setTimeout(() => resolve(true), 1000); }))
+        console.log(await this.ansibleService.run('test'));
+        // await this.wifiService.run();
+        // await this.ethernetService.run();
+        // await this.wapService.run();
     }
 
     log(... args) { if (this.verbose) console.log(... args); }

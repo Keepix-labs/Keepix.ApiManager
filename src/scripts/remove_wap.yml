@@ -1,0 +1,62 @@
+---
+- name: Remove Wireless Access Point (WAP) and Revert to DHCP
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Stop hostapd and isc-dhcp-server services
+      service:
+        name: "{{ item }}"
+        state: stopped
+      loop:
+        - hostapd
+        - isc-dhcp-server
+
+    - name: Disable hostapd and isc-dhcp-server at boot
+      service:
+        name: "{{ item }}"
+        enabled: no
+      loop:
+        - hostapd
+        - isc-dhcp-server
+
+    - name: Remove WAP configuration file
+      file:
+        path: /etc/hostapd/hostapd.conf
+        state: absent
+        
+    - name: Remove DHCP configuration
+      lineinfile:
+        path: /etc/dhcp/dhcpd.conf
+        line: "{{ item }}"
+        state: absent
+      loop:
+        - "subnet 192.168.1.0 netmask 255.255.255.0 {"
+        - "  range 192.168.1.10 192.168.1.50;"
+        - "  option broadcast-address 192.168.1.255;"
+        - "  option routers 192.168.1.1;"
+        - "  default-lease-time 600;"
+        - "  max-lease-time 7200;"
+        - "  option domain-name \"local\";"
+        - "  option domain-name-servers 8.8.8.8, 8.8.4.4;"
+        - "}"
+        
+    - name: Remove extra blank lines
+      replace:
+        path: /etc/dhcp/dhcpd.conf
+        regexp: '^\s*$'
+        replace: ''    
+
+    - name: Remove WAP configuration from network interfaces
+      replace:
+        path: /etc/network/interfaces
+        regexp: "^(allow-hotplug wlan0|iface wlan0 inet manual|iface wlan0 inet static|address 192.168.1.1|netmask 255.255.255.0).*$"
+        replace: ""
+        
+    - name: Remove static IP address
+      command: ip address delete 192.168.1.1/24 dev wlan0
+      ignore_errors: yes
+
+    - name: Restart networking service
+      service:
+        name: networking
+        state: restarted

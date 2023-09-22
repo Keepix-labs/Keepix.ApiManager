@@ -1,0 +1,11 @@
+---
+- name: Forward UPnP Port
+  hosts: localhost
+  gather_facts: no
+  become: yes
+  vars:
+    port: "{{ PORT }}"
+    proto: "{{ PROTO }}"
+  tasks:
+    - name: Forward UPnP Port
+      command: "upnpc -r {{ port }} {{ proto }}"

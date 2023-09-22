@@ -1,0 +1,9 @@
+---
+- name: WhoAmi
+  become: yes
+  gather_facts: false
+  hosts: localhost
+  tasks:
+    - name: WhoAmi
+      debug:
+        msg: "DEBUG TEST"
