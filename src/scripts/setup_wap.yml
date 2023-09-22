@@ -2,8 +2,13 @@
 - name: Configure Hotspot Wi-Fi
   hosts: localhost
   become: yes
-  
+
   tasks:
+
+    - name: Create accesspoint directory
+      command: mkdir /etc/accesspoint
+      become: yes
+      ignore_errors: yes
 
     - name: Set accesspoint config
       template:
