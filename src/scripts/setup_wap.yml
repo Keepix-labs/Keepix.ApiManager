@@ -23,5 +23,5 @@
       become: yes
 
     - name: Start accesspoint
-      command: pyaccesspoint --config -v start
+      command: pyaccesspoint --config start
       become: yes
