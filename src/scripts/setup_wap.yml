@@ -4,7 +4,6 @@
   become: yes
   vars:
     ssid: "{{ ssid }}"
-    wpa_passphrase: "{{ wpa_passphrase }}"
   tasks:
     - name: Check if connected to Wi-Fi
       command: iwgetid -r
@@ -23,12 +22,20 @@
       loop:
         - hostapd
 
-    - name: Stop hostapd and dhcp server services
+    - name: Stop hostapd server services
       service:
         name: "{{ item }}"
         state: stopped
       loop:
         - hostapd
+
+    - name: Unmask hostapd server services
+      service:
+        name: "{{ item }}"
+        state: unmask
+      loop:
+        - hostapd
+      ignore_errors: yes
 
     - name: Configure network interface
       lineinfile:
@@ -45,9 +52,6 @@
         name: networking
         state: restarted
 
-    - name: Set static IP address
-      command: ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0
-
     - name: Configure hostapd
       copy:
         dest: /etc/hostapd/hostapd.conf
@@ -59,11 +63,7 @@
             macaddr_acl=0
             auth_algs=1
             ignore_broadcast_ssid=0
-            wpa=2
-            wpa_passphrase={{ wpa_passphrase }}
-            wpa_key_mgmt=WPA-PSK
-            wpa_pairwise=TKIP
-            rsn_pairwise=CCMP
+            wpa=0
 
     - name: Update hostapd configuration file path
       lineinfile:
