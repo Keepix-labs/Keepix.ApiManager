@@ -35,9 +35,9 @@ export class WapService {
                 && !this.wifiService.isConnected
                 && moment(this.ethernetService.lastTimeAlive).add(1, 'minute').isBefore(moment())    
             ) {
-                if (this.dhcpServer == undefined) {
-                    this.createServerDHCP();
-                }
+                // if (this.dhcpServer == undefined) {
+                //     this.createServerDHCP();
+                // }
                 const ansibleResult = await this.ansibleService.run(
                     `setup_wap`,
                     {

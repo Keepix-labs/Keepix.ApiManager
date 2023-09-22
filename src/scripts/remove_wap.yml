@@ -3,19 +3,39 @@
   hosts: localhost
   become: yes
   tasks:
-    - name: Stop hostapd services
+
+    - name: Stop hostapd and dhcp services
       service:
         name: "{{ item }}"
         state: stopped
       loop:
         - hostapd
+        - isc-dhcp-server
 
-    - name: Disable hostapd at boot
+    - name: Disable hostapd and dhcp at boot
       service:
         name: "{{ item }}"
         enabled: no
       loop:
         - hostapd
+        - isc-dhcp-server
+
+    - name: Check if DHCP process exists
+      shell: ps aux | grep dhcp | grep -v grep
+      register: dhcp_process
+      ignore_errors: yes
+
+    - name: Kill DHCP process if it exists
+      shell: "kill -9 {{ dhcp_process.stdout.split()[1] }}"
+      when: dhcp_process.stdout is defined
+      ignore_errors: yes
+
+    - name: Remove DHCP PID file
+      file:
+        path: /var/run/dhcpd.pid
+        state: absent
+      when: dhcp_process.stdout is defined
+      ignore_errors: yes
 
     - name: Remove WAP configuration file
       file:

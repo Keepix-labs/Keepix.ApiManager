@@ -5,6 +5,9 @@
   vars:
     ssid: "{{ ssid }}"
   tasks:
+
+    # STOP WIFI IF CONNECTED
+
     - name: Check if connected to Wi-Fi
       command: iwgetid -r
       register: wifi_ssid
@@ -14,28 +17,8 @@
       command: nmcli connection down "{{ wifi_ssid.stdout }}"
       when: wifi_ssid.stdout is defined
       ignore_errors: yes
-    
-    - name: Install necessary packages
-      apt:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - hostapd
 
-    - name: Stop hostapd server services
-      service:
-        name: "{{ item }}"
-        state: stopped
-      loop:
-        - hostapd
-
-    - name: Unmask hostapd server services
-      service:
-        name: "{{ item }}"
-        state: unmask
-      loop:
-        - hostapd
-      ignore_errors: yes
+    # Interface
 
     - name: Configure network interface
       lineinfile:
@@ -51,6 +34,23 @@
       service:
         name: networking
         state: restarted
+
+    # Hostapd
+
+    - name: Stop hostapd server services
+      service:
+        name: "{{ item }}"
+        state: stopped
+      loop:
+        - hostapd
+
+    - name: Unmask hostapd server services
+      service:
+        name: "{{ item }}"
+        state: unmask
+      loop:
+        - hostapd
+      ignore_errors: yes
 
     - name: Configure hostapd
       copy:
@@ -83,3 +83,49 @@
         enabled: yes
       loop:
         - hostapd
+
+    # DHCP
+      
+    - name: Stop dhcp server services
+      service:
+        name: "{{ item }}"
+        state: stopped
+      loop:
+        - isc-dhcp-server
+
+    - name: Unmask dhcp server services
+      service:
+        name: "{{ item }}"
+        state: unmask
+      loop:
+        - isc-dhcp-server
+      ignore_errors: yes
+
+    - name: Configure DHCP server
+      lineinfile:
+        path: /etc/dhcp/dhcpd.conf
+        line: "{{ item }}"
+      loop:
+        - "subnet 192.168.1.0 netmask 255.255.255.0 {"
+        - "  range 192.168.1.10 192.168.1.50;"
+        - "  option broadcast-address 192.168.1.255;"
+        - "  option routers 192.168.1.1;"
+        - "  default-lease-time 600;"
+        - "  max-lease-time 7200;"
+        - "  option domain-name \"local\";"
+        - "  option domain-name-servers 8.8.8.8, 8.8.4.4;"
+        - "}"
+
+    - name: Start dhcp server services
+      service:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - isc-dhcp-server
+
+    - name: Enable dhcp server at boot
+      service:
+        name: "{{ item }}"
+        enabled: yes
+      loop:
+        - isc-dhcp-server
