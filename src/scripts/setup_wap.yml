@@ -2,101 +2,21 @@
 - name: Configure Hotspot Wi-Fi
   hosts: localhost
   become: yes
-  vars:
-    ssid: "Keepix"  # Remplacez par le SSID de votre choix
-    wifi_interface: wlan0  # Remplacez par le nom de votre interface Wi-Fi
-    web_server_ip: 192.168.1.1  # Adresse IP du serveur web
-    web_server_port: 3000  # Port du serveur web
-
+  
   tasks:
 
-    # Configuration de l'interface Wi-Fi en mode hotspot
-    - name: Configure interface for hotspot
-      command: >
-        ip link set {{ wifi_interface }} down
-        ip link set {{ wifi_interface }} mode ad-hoc
-        ip link set {{ wifi_interface }} Update
-        ip address add 192.168.1.1/24 dev {{ wifi_interface }}
-      become: yes
-
-    # Installation et configuration du serveur DHCP
-    - name: Install DHCP server
-      apt:
-        name: isc-dhcp-server
-        state: present
-      become: yes
-
-    - name: Configure DHCP server
+    - name: Set accesspoint config
       template:
-        src: dhcpd.conf.j2
-        dest: /etc/dhcp/dhcpd.conf
+        src: accesspoint.json
+        dest: /etc/accesspoint/accesspoint.json
       become: yes
 
-    - name: Set DHCP server interface
-      lineinfile:
-        path: /etc/default/isc-dhcp-server
-        regexp: "^INTERFACESv4="
-        line: "INTERFACESv4=\"{{ wifi_interface }}\""
-      become: yes
-
-    - name: Restart DHCP server
-      service:
-        name: isc-dhcp-server
-        state: restarted
-      become: yes
-
-    # Configuration du partage de connexion (redirection du trafic HTTP)
-    - name: Configure IP forwarding
-      sysctl:
-        name: net.ipv4.ip_forward
-        value: 1
-        state: present
-        sysctl_set: yes
-      become: yes
-
-    - name: Redirect HTTP traffic to web server
-      iptables:
-        table: nat
-        chain: PREROUTING
-        in_interface: "{{ wifi_interface }}"
-        protocol: tcp
-        destination_port: 80
-        jump: DNAT
-        to_destination: "{{ web_server_ip }}:{{ web_server_port }}"
-      become: yes
-
-    - name: Save iptables rules
-      command: iptables-save > /etc/iptables.ipv4.nat
-      become: yes
-
-    # Installation et configuration de hostapd
-    - name: Install hostapd
-      apt:
-        name: hostapd
-        state: present
-      become: yes
-
-    - name: Configure hostapd
+    - name: Set accesspoint hostapd
       template:
-        src: hostapd.conf.j2
-        dest: /etc/hostapd/hostapd.conf
+        src: hostapd.config
+        dest: /etc/accesspoint/hostapd.config
       become: yes
 
-    - name: Update hostapd configuration file path
-      lineinfile:
-        path: /etc/default/hostapd
-        regexp: "^#DAEMON_CONF="
-        line: "DAEMON_CONF=\"/etc/hostapd/hostapd.conf\""
-      become: yes
-
-    - name: Start hostapd service
-      service:
-        name: hostapd
-        state: started
-      become: yes
-
-    - name: Enable hostapd service at boot
-      service:
-        name: hostapd
-        enabled: yes
+    - name: Start accesspoint
+      command: pyaccesspoint --config -v start
       become: yes
