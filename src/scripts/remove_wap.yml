@@ -7,3 +7,18 @@
     - name: Stop accesspoint
       command: pyaccesspoint --config -v stop
       become: yes
+
+    - name: Remove WAP configuration from network interfaces
+      replace:
+        path: /etc/network/interfaces
+        regexp: "^(allow-hotplug wlan0|iface wlan0 inet manual|iface wlan0 inet static|address 192.168.1.1|netmask 255.255.255.0).*$"
+        replace: ""
+
+    - name: Remove static IP address
+      command: ip address delete 192.168.1.1/24 dev wlan0
+      ignore_errors: yes
+
+    - name: Restart networking service
+      service:
+        name: networking
+        state: restarted
