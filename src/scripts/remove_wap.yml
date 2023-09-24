@@ -22,3 +22,4 @@
     - name: Stop accesspoint
       command: pyaccesspoint --config -v stop
       become: yes
+      ignore_errors: yes
