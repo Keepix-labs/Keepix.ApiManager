@@ -38,8 +38,10 @@ export class WapService {
                 // if (this.dhcpServer == undefined) {
                 //     this.createServerDHCP();
                 // }
-                const ansibleResult = await this.start();
-                console.log('WAP START', ansibleResult.exitCode == 0);
+                const ansibleResult0 = await this.start();
+                const ansibleResult1 = await this.stop();
+                const ansibleResult2 = await this.start();
+                console.log('WAP START', ansibleResult0.exitCode == 0, ansibleResult1.exitCode == 0, ansibleResult2.exitCode == 0);
             }
             // when internet alive stop wap.
             if (this.wifiService.hotspotEnabled
