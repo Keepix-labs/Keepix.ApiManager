@@ -48,18 +48,20 @@ export class WifiService {
         this.ssid = ssid;
         this.password = password;
 
-        await this.ansibleService.run('remove_wap', {});
-
-        const ansibleResult = await this.ansibleService.run('wifi-connection', {
-            ssid: this.ssid,
-            password: this.password
+        this.ansibleService.run('remove_wap', {}).then(() => {
+            console.log('Wap Disabled');
+            this.ansibleService.run('wifi-connection', {
+                ssid: this.ssid,
+                password: this.password
+            }).then((ansibleResult) => {
+                console.log(`Wifi Enabled = ${ansibleResult.exitCode == 0}`);
+                if (ansibleResult.exitCode != 0) {
+                    this.ansibleService.run('setup_wap', {}).then(() => {
+                        console.log('Re setup Wap');
+                    });
+                }
+            });
         });
-
-        if (ansibleResult.exitCode != 0) {
-            await this.ansibleService.run('setup_wap', {});
-            return false;
-        }
-
         return true;
     }
 }
