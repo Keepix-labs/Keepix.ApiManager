@@ -1,0 +1,8 @@
+---
+- name: Active Wi-Fi Network
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Enable Wi-Fi
+      command: nmcli radio wifi on
+      ignore_errors: yes
