@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { WifiService } from './shared/wifi.service';
 
-@Controller('api')
+@Controller('app')
 export class ApiController {
 
     constructor(private wifiService: WifiService) {
