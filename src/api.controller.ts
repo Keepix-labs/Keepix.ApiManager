@@ -11,6 +11,11 @@ export class ApiController {
         return 'Keepix Api';
     }
 
+    @Get('hello')
+    hello() {
+        return 'OK';
+    }
+
     @Post('wifi')
     async setWifi(@Body() body: { ssid: string, password: string }) {
         return await this.wifiService.connect(body.ssid, body.password);
