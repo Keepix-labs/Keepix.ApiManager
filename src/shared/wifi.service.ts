@@ -21,6 +21,8 @@ export class WifiService {
         try {
             const stdout = (await this.bashService.execWrapper('/usr/sbin/iwgetid')) ?? '';
             
+            console.log('WIFI iwgetid: ', stdout);
+
             if (stdout.trim() != ''
                 && stdout.trim().match(/ESSID\:\"[\w\W]+\"/gm) != undefined) {
                 // const wifiSSID = stdout.trim();
