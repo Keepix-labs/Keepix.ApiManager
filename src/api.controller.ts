@@ -4,9 +4,7 @@ import { WifiService } from './shared/wifi.service';
 @Controller('app')
 export class ApiController {
 
-    constructor(private wifiService: WifiService) {
-
-    }
+    constructor(private wifiService: WifiService) {}
 
     @Get()
     get() {

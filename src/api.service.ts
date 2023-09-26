@@ -14,11 +14,9 @@ export class ApiService {
     private verbose: boolean = false;
 
     constructor(
-        private bashService: BashService,
         private wifiService: WifiService,
         private ethernetService: EthernetService,
-        private wapService: WapService,
-        private ansibleService: AnsibleService) {
+        private wapService: WapService) {
     }
 
     schedule() {
