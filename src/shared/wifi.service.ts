@@ -52,7 +52,7 @@ export class WifiService {
             console.log('Wap Disabled');
             this.ansibleService.run('wifi-on', {}).then((ansibleResult) => {
 
-                // wait 10s
+                // wait wifi detection of ssid's during 10s
                 setTimeout(() => {
 
                     this.ansibleService.run('wifi-connection', {
