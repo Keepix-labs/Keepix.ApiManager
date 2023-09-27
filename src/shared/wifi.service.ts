@@ -2,49 +2,49 @@ import { Injectable } from "@nestjs/common";
 import { BashService } from "./bash.service";
 import { AnsibleService } from "./ansible.service";
 import { retry } from '@ajimae/retry';
+import { EthernetService } from "./ethernet.service";
 
 @Injectable()
 export class WifiService {
 
+    public isEnabled: boolean = false;
     public isConnected: boolean = false;
-    public hotspotEnabled: boolean = false;
-    public lastTimeAlive: number = 0;
 
     private ssid: string = undefined;
     private password: string = undefined;
 
     constructor(
         private bashService: BashService,
-        private ansibleService: AnsibleService) {}
+        private ansibleService: AnsibleService,
+        private ethernetService: EthernetService) {}
 
     async run() {
         console.log(`Wifi Service Running`);
         try {
 
             const stdout = (await this.bashService.execWrapper('nmcli radio wifi')) ?? '';
-            
-            console.log('WIFI Is: ', stdout);
 
-            if (stdout.trim() != ''
-                && stdout.trim().toLowerCase() != 'disabled') {
-                // const wifiSSID = stdout.trim();
+            // have internet
+            if (this.ethernetService.isAlive) {
                 this.isConnected = true;
-                this.hotspotEnabled = false;
-                this.lastTimeAlive = (new Date()).getTime();
-            } else if (stdout.trim() != ''
-                && stdout.trim().toLowerCase() == 'disabled') {
-                // Wap mode
-                this.hotspotEnabled = true;
-                this.isConnected = false;
             } else {
                 this.isConnected = false;
-                this.hotspotEnabled = false;
+            }
+
+            // is enabled
+            if (stdout.trim() != ''
+                && stdout.trim().toLowerCase() == 'enabled') {
+                this.isEnabled = true;
+            } else if (stdout.trim() != ''
+                && stdout.trim().toLowerCase() == 'disabled') {
+                this.isEnabled = false;
+            } else {
+                this.isEnabled = false;
             }
         } catch (e) {
-            this.isConnected = false;
-            this.hotspotEnabled = false;
+            this.isEnabled = false;
         }
-        console.log(`WIFI IsConnected=${this.isConnected}, HotSpotEnabled=${this.hotspotEnabled}`);
+        console.log(`WIFI IsEnabled=${this.isEnabled}, IsConnected=${this.isConnected}`);
         console.log(`Wifi Service Running Finished`);
     }
 

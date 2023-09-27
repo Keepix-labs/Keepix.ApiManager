@@ -12,8 +12,8 @@ export class WapService {
 
     private ssid: string = 'keepix';
     private wpa_passphrase: string = 'keepixpassword1234';
+    private wapIsActive: boolean = false;
     private running: boolean = false;
-    private dhcpServer: any = undefined;
 
     constructor(
         private ethernetService: EthernetService,
@@ -29,27 +29,16 @@ export class WapService {
         this.running = true;
         try {
             // when no internet since 1min start wap
-            if (
-                !this.wifiService.hotspotEnabled
-                && !this.ethernetService.isAlive
+            if (!this.ethernetService.isAlive
                 && !this.wifiService.isConnected
-                && moment(this.ethernetService.lastTimeAlive).add(1, 'minute').isBefore(moment())    
+                && this.wifiService.isEnabled
+                && moment(this.ethernetService.lastTimeAlive).add(30, 'seconds').isBefore(moment())    
             ) {
-                // if (this.dhcpServer == undefined) {
-                //     this.createServerDHCP();
-                // }
                 const ansibleResult0 = await this.start();
                 const ansibleResult1 = await this.stop();
                 const ansibleResult2 = await this.start();
                 console.log('WAP START', ansibleResult0.exitCode == 0, ansibleResult1.exitCode == 0, ansibleResult2.exitCode == 0);
-            }
-            // when internet alive stop wap.
-            if (this.wifiService.hotspotEnabled
-                && this.ethernetService.isAlive
-                && this.wifiService.isConnected
-            ) {
-                const ansibleResult = await this.stop();
-                console.log('WAP STOP', ansibleResult);
+                this.wapIsActive = ansibleResult0.exitCode == 0 && ansibleResult1.exitCode == 0 && ansibleResult2.exitCode == 0;
             }
         } catch (e) {
             console.error('WAP ERROR', e);
