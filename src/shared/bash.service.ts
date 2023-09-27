@@ -15,12 +15,16 @@ export class BashService {
 
     async execWrapper(commandLine: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            exec(commandLine, (error, stdout, stderr) => {
-                if (error) {
-                    console.warn(error);
-                }
-                resolve(stdout? stdout : stderr);
-            });
+            try {
+                exec(commandLine, (error, stdout, stderr) => {
+                    if (error) {
+                        console.warn(error);
+                    }
+                    resolve(stdout? stdout : stderr);
+                });
+            } catch (e) {
+                reject(e);
+            }
         });
     }
 

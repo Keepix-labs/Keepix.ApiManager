@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { BashService } from "./bash.service";
 import { AnsibleService } from "./ansible.service";
+import { retry } from '@ajimae/retry';
 
 @Injectable()
 export class WifiService {
@@ -19,7 +20,20 @@ export class WifiService {
     async run() {
         console.log(`Wifi Service Running`);
         try {
-            const stdout = (await this.bashService.execWrapper('/usr/sbin/iwgetid')) ?? '';
+
+            const exec = () => {
+                // This will be any async or sync action that needs to be retried.
+                return this.bashService.execWrapper('/usr/sbin/iwgetid')
+            }
+
+            const predicate = (response, retryCount) => {
+                console.log('retry', response, retryCount) // goes from 0 to maxRetries 
+              
+                // once this condition is met the retry exits
+                return (response != undefined)
+            }
+
+            const stdout = (await retry(exec, predicate, { maxRetries: 5, backoff: true })) ?? '';
             
             console.log('WIFI iwgetid: ', stdout);
 
