@@ -21,30 +21,18 @@ export class WifiService {
         console.log(`Wifi Service Running`);
         try {
 
-            const exec = () => {
-                // This will be any async or sync action that needs to be retried.
-                return this.bashService.execWrapper('/usr/sbin/iwgetid')
-            }
-
-            const predicate = (response, retryCount) => {
-                console.log('retry', response, retryCount) // goes from 0 to maxRetries 
-              
-                // once this condition is met the retry exits
-                return (response != undefined)
-            }
-
-            const stdout = (await retry(exec, predicate, { maxRetries: 5, backoff: true })) ?? '';
+            const stdout = (await this.bashService.execWrapper('nmcli radio wifi')) ?? '';
             
-            console.log('WIFI iwgetid: ', stdout);
+            console.log('WIFI Is: ', stdout);
 
             if (stdout.trim() != ''
-                && stdout.trim().match(/ESSID\:\"[\w\W]+\"/gm) != undefined) {
+                && stdout.trim().toLowerCase() != 'disabled') {
                 // const wifiSSID = stdout.trim();
                 this.isConnected = true;
                 this.hotspotEnabled = false;
                 this.lastTimeAlive = (new Date()).getTime();
             } else if (stdout.trim() != ''
-                && stdout.trim().match(/ESSID\:\"\"/gm) != undefined) {
+                && stdout.trim().toLowerCase() == 'disabled') {
                 // Wap mode
                 this.hotspotEnabled = true;
                 this.isConnected = false;
