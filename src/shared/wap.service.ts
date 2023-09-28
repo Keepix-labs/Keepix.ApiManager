@@ -79,7 +79,7 @@ export class WapService {
 
         console.log('iw:', stdout);
 
-        if (stdout.includes('ssid')) {
+        if (stdout.toLowerCase().includes('ssid') && stdout.toLowerCase().includes('keepix')) {
             this.wapIsActive = true;
         } else {
             this.wapIsActive = false;
