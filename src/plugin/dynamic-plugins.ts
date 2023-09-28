@@ -5,6 +5,27 @@ export const getListOfPlugins = () => {
     .filter(x => fs.statSync(`${__dirname}/${x}`).isDirectory());
 }
 
+export const getListOfPluginsWithInformations = async () => {
+    const pluginIds = getListOfPlugins();
+    let pluginsWithInformations = [];
+
+    for (let i = 0; i < pluginIds.length; i++) {
+
+        const informations: any = (await (new Promise((resolve) => {
+            import(`./${pluginIds[i]}/${pluginIds[i]}.module`).then((m: any) => {
+                resolve(m.pluginInformations);
+            });
+        })));
+
+        pluginsWithInformations.push({
+            id: pluginIds[i],
+            ... informations
+        });
+    }
+
+    return pluginsWithInformations;
+}
+
 export const getDynamicPluginModules = () => {
     return getListOfPlugins().map(x => {
         return {
