@@ -116,6 +116,8 @@ export class WapService {
             }, 500);
         }
 
+        console.log(`HotSpot Enabled=${wapIsActive}`);
+
         return wapIsActive;
     }
 
@@ -130,6 +132,8 @@ export class WapService {
         await this.bashService.execWrapper(`pyaccesspoint stop`);
 
         const wapIsActive = await this.isActive();
+
+        console.log(`HotSpot Disabled=${!wapIsActive}`);
 
         if (wapIsActive) {
             return false;
