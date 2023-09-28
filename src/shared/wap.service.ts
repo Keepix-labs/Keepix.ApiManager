@@ -9,17 +9,16 @@ import { BashService } from "./bash.service";
 @Injectable()
 export class WapService {
 
-    private ssid: string = 'keepix';
-    private wpa_passphrase: string = 'keepixpassword1234';
     private running: boolean = false;
     private lastTimeEthernetAlive: number = 0;
-    private firstTimeRunning: boolean = true;
 
     private wifiSSID: string = undefined;
     private wifiPassword: string = undefined;
 
     private ledWapEnabledInterval = undefined;
     private ledWapTick = 0;
+
+    private firstLoad: boolean = true;
 
     constructor(
         private ansibleService: AnsibleService,
@@ -34,9 +33,17 @@ export class WapService {
         this.running = true;
         try {
 
-            if (this.firstTimeRunning) {
+
+
+            if (this.firstLoad) {
+                await this.stopHotSpot(); // force stop hotspot
+                if (!(await this.wifiIsActive())) {
+                    await this.bashService.execWrapper('nmcli radio wifi on');
+                    // wait 2sec
+                    new Promise((resolve) => { setTimeout(() => { resolve(true); }, 2000); });
+                }
                 this.lastTimeEthernetAlive = moment().subtract(30, 'minutes').toDate().getTime();
-                this.firstTimeRunning = false;
+                this.firstLoad = false;
             }
 
             let hasWifiActivated = await this.wifiIsActive();
