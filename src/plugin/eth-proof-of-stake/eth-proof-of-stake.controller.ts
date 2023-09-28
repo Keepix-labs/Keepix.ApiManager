@@ -62,9 +62,12 @@ export class EthProofOfStakeController {
 
     @Get('page/2:amount')
     async formTransfer(@Req() request: Request) {
+
+        const address = 'TODO deposit address from Nico API';
+
         return {
             componentName: 'proofOfStakeDeposit',
-            title: `Transfer ${request.params['amount']} to this address`,
+            title: `Transfer ${request.params['amount']} to this address ${address}`,
             nextPage: '/page/3',
             values: {
                 address: '',
