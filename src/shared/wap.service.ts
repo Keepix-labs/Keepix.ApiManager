@@ -6,6 +6,7 @@ import { AnsibleService } from "./ansible.service";
 import { WifiService } from "./wifi.service";
 import * as DHCP from "dhcp";
 import * as hostapd from "wireless-tools/hostapd";
+import { BashService } from "./bash.service";
 
 @Injectable()
 export class WapService {
@@ -18,7 +19,8 @@ export class WapService {
     constructor(
         private ethernetService: EthernetService,
         private wifiService: WifiService,
-        private ansibleService: AnsibleService) {
+        private ansibleService: AnsibleService,
+        private bashService: BashService) {
     }
 
     async run() {
@@ -28,12 +30,10 @@ export class WapService {
         console.log(`Wap Service Running`);
         this.running = true;
         try {
+            //&& moment(this.ethernetService.lastTimeAlive).add(30, 'seconds').isBefore(moment()
+            const wapIsActive = await this.isActive(); 
             // when no internet since 1min start wap
-            if (!this.ethernetService.isAlive
-                && !this.wifiService.isConnected
-                && this.wifiService.isEnabled
-                && moment(this.ethernetService.lastTimeAlive).add(30, 'seconds').isBefore(moment())    
-            ) {
+            if (!this.ethernetService.isAlive && !wapIsActive) {
                 const ansibleResult0 = await this.start();
                 const ansibleResult1 = await this.stop();
                 const ansibleResult2 = await this.start();
@@ -45,6 +45,19 @@ export class WapService {
         }
         this.running = false;
         console.log(`Wap Service Running Finished`);
+    }
+
+    async isActive() {
+        const stdout = (await this.bashService.execWrapper('iw wlan0 info')) ?? '';
+
+        console.log('iw:', stdout);
+
+        if (stdout.includes('ssid')) {
+            this.wapIsActive = true;
+        } else {
+            this.wapIsActive = false;
+        }
+        return this.wapIsActive;
     }
 
     async start() {
