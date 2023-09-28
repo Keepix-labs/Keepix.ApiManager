@@ -212,7 +212,12 @@ export class WapService {
 
         // is enabled
         if (stdout.trim() != '') {
-            return stdout.split('\n').filter(x => x != undefined && x != '');
+            return stdout
+                .split('\n')
+                .filter(x => x != undefined && x != '')
+                .slice(1)
+                .map(x => x.split(' ').filter(x => x != undefined && x != '')[1])
+                .filter(x => x != undefined && x != '');
         }
         return [];
     }
