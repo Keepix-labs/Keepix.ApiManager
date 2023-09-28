@@ -90,10 +90,10 @@ export class WapService {
     async startHotSpot() {
         await this.bashService.execWrapper(`pkill hostapd`);
         await this.bashService.execWrapper(`killall dnsmasq`);
-        await this.bashService.execWrapper(`killall wpa_supplicant`);
+        // await this.bashService.execWrapper(`killall wpa_supplicant`);
         await this.bashService.execWrapper(`rfkill unblock wlan`);
         
-        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces.config /etc/network/interfaces.config`);
+        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces.config /etc/network/interfaces`);
         await this.bashService.execWrapper(`ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0`);
         // accesspoint start
         await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=1`);
