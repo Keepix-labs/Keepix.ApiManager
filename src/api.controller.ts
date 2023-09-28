@@ -4,11 +4,15 @@ import { WapService } from './shared/wap.service';
 @Controller('app')
 export class ApiController {
 
-    constructor(private wapService: WapService) {}
+    private name: string = 'Keepix';
+
+    constructor(private wapService: WapService) {
+
+    }
 
     @Get()
     get() {
-        return 'Keepix Api';
+        return this.name;
     }
 
     @Get('hello')
@@ -22,7 +26,8 @@ export class ApiController {
     }
 
     @Post('wifi')
-    async setWifi(@Body() body: { ssid: string, password: string }) {
+    async setWifi(@Body() body: { name: string, ssid: string, password: string }) {
+        this.name = body.name;
         return await this.wapService.connectToWifi(body.ssid, body.password);
     }
 }
