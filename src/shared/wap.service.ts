@@ -88,18 +88,14 @@ export class WapService {
     }
 
     async startHotSpot() {
-        await this.bashService.execWrapper('mkdir /etc/accesspoint');
-        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/accesspoint.json /etc/accesspoint/accesspoint.json`);
-        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/hostapd.config /etc/accesspoint/hostapd.config`);
+        await this.bashService.execWrapper(`pkill hostapd`);
+        await this.bashService.execWrapper(`killall dnsmasq`);
+        await this.bashService.execWrapper(`killall wpa_supplicant`);
+        await this.bashService.execWrapper(`rfkill unblock wlan`);
+        
         await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces.config /etc/network/interfaces.config`);
         await this.bashService.execWrapper(`ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0`);
-        // await this.bashService.execWrapper(`systemctl restart networking`);
-        
         // accesspoint start
-        await this.bashService.execWrapper(`killall wpa_supplicant`);
-        // await this.bashService.execWrapper(`nmcli radio wifi off`);
-        //if error await this.bashService.execWrapper(`nmcli nm wifi off`);
-        await this.bashService.execWrapper(`rfkill unblock wlan`);
         await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=1`);
         await this.bashService.execWrapper(`dnsmasq --dhcp-authoritative --interface=wlan0 --dhcp-range=192.168.1.20,192.168.1.100,255.255.255.0,4h`);
         await this.bashService.execWrapper(`hostapd -B ${__dirname}/../scripts/hostapd.config`);

@@ -17,12 +17,15 @@ export class ApiService {
 
     schedule() {
         console.log(`${this.title} Start`);
-        schedule.scheduleJob({
-            start: moment().add(1, 'minute').toDate(),
-            rule: '*/1 * * * *' /* 1min */
-        }, () => {
+        setInterval(() => {
             this.run();
-        });
+        }, 1000 * 10); // 10 sec
+        // schedule.scheduleJob({
+        //     start: moment().add(1, 'minute').toDate(),
+        //     rule: '*/1 * * * *' /* 1min */
+        // }, () => {
+        //     this.run();
+        // });
         this.run(); // first run
     }
 
