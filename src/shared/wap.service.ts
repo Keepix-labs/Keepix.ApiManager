@@ -119,7 +119,7 @@ export class WapService {
                     this.ledWapTick = 1;
                 }
                 await this.bashService.execWrapper(`sh -c "echo ${this.ledWapTick} > /sys/class/leds/user-led1/brightness"`);
-            });
+            }, 500);
         }
 
         return result;
