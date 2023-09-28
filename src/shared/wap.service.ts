@@ -94,9 +94,9 @@ export class WapService {
         await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces.config /etc/network/interfaces.config`);
         await this.bashService.execWrapper(`ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0`);
         await this.bashService.execWrapper(`systemctl restart networking`);
-        await this.bashService.execWrapper(`pyaccesspoint --config start`);
-        await this.bashService.execWrapper(`pyaccesspoint --config stop`);
-        await this.bashService.execWrapper(`pyaccesspoint --config start`);
+        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
+        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config stop`);
+        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
         await this.bashService.execWrapper(`nmcli radio wifi on`);
 
         const wapIsActive = await this.isActive();
@@ -129,7 +129,7 @@ export class WapService {
         await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces-default.config /etc/network/interfaces.config`);
         await this.bashService.execWrapper(`ip address delete 192.168.1.1/24 dev wlan0`);
         await this.bashService.execWrapper(`systemctl restart networking`);
-        await this.bashService.execWrapper(`pyaccesspoint stop`);
+        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint stop`);
 
         const wapIsActive = await this.isActive();
 
