@@ -94,9 +94,26 @@ export class WapService {
         await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces.config /etc/network/interfaces.config`);
         await this.bashService.execWrapper(`ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0`);
         await this.bashService.execWrapper(`systemctl restart networking`);
-        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
-        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config stop`);
-        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
+        
+        // accesspoint start
+        await this.bashService.execWrapper(`killall wpa_supplicant`);
+        // await this.bashService.execWrapper(`nmcli radio wifi off`);
+        //if error await this.bashService.execWrapper(`nmcli nm wifi off`);
+        await this.bashService.execWrapper(`rfkill unblock wlan`);
+        await this.bashService.execWrapper(`ifconfig wlan0 up 192.168.1.1 netmask 255.255.255.0`);
+        await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=1`);
+        await this.bashService.execWrapper(`dnsmasq --dhcp-authoritative --interface=wlan0 --dhcp-range=192.168.1.20,192.168.1.100,255.255.255.0,4h`);
+        await this.bashService.execWrapper(`hostapd -B ${__dirname}/../scripts/hostapd.config`);
+        
+        // accesspoint stop
+        // await this.bashService.execWrapper(`ifconfig mon.wlan0 down`);
+        // await this.bashService.execWrapper(`pkill hostapd`);
+        // await this.bashService.execWrapper(`killall dnsmasq`);
+        // await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=0`);
+
+        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
+        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config stop`);
+        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
         await this.bashService.execWrapper(`nmcli radio wifi on`);
 
         const wapIsActive = await this.isActive();
@@ -129,7 +146,14 @@ export class WapService {
         await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces-default.config /etc/network/interfaces.config`);
         await this.bashService.execWrapper(`ip address delete 192.168.1.1/24 dev wlan0`);
         await this.bashService.execWrapper(`systemctl restart networking`);
-        await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint stop`);
+
+        // accesspoint stop
+        await this.bashService.execWrapper(`ifconfig mon.wlan0 down`);
+        await this.bashService.execWrapper(`pkill hostapd`);
+        await this.bashService.execWrapper(`killall dnsmasq`);
+        await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=0`);
+
+        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint stop`);
 
         const wapIsActive = await this.isActive();
 
