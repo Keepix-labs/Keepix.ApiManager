@@ -102,17 +102,6 @@ export class WapService {
         
         await this.bashService.execWrapper(`systemctl restart networking`);
 
-        // accesspoint stop
-        // await this.bashService.execWrapper(`ifconfig mon.wlan0 down`);
-        // await this.bashService.execWrapper(`pkill hostapd`);
-        // await this.bashService.execWrapper(`killall dnsmasq`);
-        // await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=0`);
-
-        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
-        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config stop`);
-        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint --config start`);
-        // await this.bashService.execWrapper(`nmcli radio wifi on`);
-
         const wapIsActive = await this.isActive();
 
         if (wapIsActive == true) {
@@ -126,7 +115,7 @@ export class WapService {
                 } else {
                     this.ledWapTick = 1;
                 }
-                await this.bashService.execWrapper(`sh -c "echo ${this.ledWapTick} > /sys/class/leds/user-led1/brightness"`);
+                await this.bashService.execWrapper(`sh -c "echo ${this.ledWapTick} > /sys/class/leds/user-led2/brightness"`);
             }, 500);
         }
 
@@ -148,8 +137,6 @@ export class WapService {
         await this.bashService.execWrapper(`pkill hostapd`);
         await this.bashService.execWrapper(`killall dnsmasq`);
         await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=0`);
-
-        // await this.bashService.execWrapper(`/usr/local/bin/pyaccesspoint stop`);
 
         const wapIsActive = await this.isActive();
 
