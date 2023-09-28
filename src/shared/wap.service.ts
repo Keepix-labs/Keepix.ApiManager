@@ -50,15 +50,18 @@ export class WapService {
 
             if (hotSpotIsActive && ethernetIsAlive) {
                 await this.stopHotSpot();
+                this.running = false;
                 return ;
             }
 
             if (ethernetIsAlive && (hasWifiActivated == false || hasWifiConnectedOnBox == false)) {
                 // Connexion Filaire OK
+                this.running = false;
                 return ;
             }
             if (ethernetIsAlive && hasWifiActivated && hasWifiConnectedOnBox) {
                 // Connexion Wifi OK
+                this.running = false;
                 return ;
             }
             
@@ -68,6 +71,7 @@ export class WapService {
                 && hasWifiConnectedOnBox
                 && moment(this.lastTimeEthernetAlive).add(29, 'minutes').isAfter(moment())) {
                     console.log('Internet Disconnected Waiting ...');
+                    this.running = false;
                 return ;
             }
 
