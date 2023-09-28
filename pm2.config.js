@@ -1,8 +1,7 @@
 module.exports = {
     apps: [{
       name: "API",
-      script: "npm",
-      args: "run start",
-      interpreter : "node@18.18.0"
+      script: "/root/.nvm/versions/node/v18.18.0/bin/npm",
+      args: "run start"
    }]
 }
