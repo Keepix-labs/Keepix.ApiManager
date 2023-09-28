@@ -88,26 +88,20 @@ export class WapService {
     }
 
     async startHotSpot() {
+        await this.bashService.execWrapper('mkdir /etc/accesspoint');
+        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/accesspoint.json /etc/accesspoint/accesspoint.json`);
+        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/hostapd.config /etc/accesspoint/hostapd.config`);
+        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces.config /etc/network/interfaces.config`);
+        await this.bashService.execWrapper(`ip address add 192.168.1.1/24 broadcast 192.168.1.255 dev wlan0`);
+        await this.bashService.execWrapper(`systemctl restart networking`);
+        await this.bashService.execWrapper(`pyaccesspoint --config start`);
+        await this.bashService.execWrapper(`pyaccesspoint --config stop`);
+        await this.bashService.execWrapper(`pyaccesspoint --config start`);
+        await this.bashService.execWrapper(`nmcli radio wifi on`);
 
-        const startOne = await this.ansibleService.run(
-            `setup_wap`,
-            {
-                ssid: this.ssid,
-                wpa_passphrase: this.wpa_passphrase
-            }
-        );
-        const stop = await this.ansibleService.run(`remove_wap`);
-        const startTwo = await this.ansibleService.run(
-            `setup_wap`,
-            {
-                ssid: this.ssid,
-                wpa_passphrase: this.wpa_passphrase
-            }
-        );
+        const wapIsActive = await this.isActive();
 
-        const result = startOne.exitCode == 0 && stop.exitCode == 0 && startTwo.exitCode == 0;
-
-        if (result == true) {
+        if (wapIsActive == true) {
             if (this.ledWapEnabledInterval != undefined) {
                 clearInterval(this.ledWapEnabledInterval);
                 this.ledWapEnabledInterval = undefined;
@@ -122,7 +116,7 @@ export class WapService {
             }, 500);
         }
 
-        return result;
+        return wapIsActive;
     }
 
     async stopHotSpot() {
@@ -130,7 +124,17 @@ export class WapService {
             clearInterval(this.ledWapEnabledInterval);
             this.ledWapEnabledInterval = undefined;
         }
-        return await this.ansibleService.run(`remove_wap`);
+        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces-default.config /etc/network/interfaces.config`);
+        await this.bashService.execWrapper(`ip address delete 192.168.1.1/24 dev wlan0`);
+        await this.bashService.execWrapper(`systemctl restart networking`);
+        await this.bashService.execWrapper(`pyaccesspoint stop`);
+
+        const wapIsActive = await this.isActive();
+
+        if (wapIsActive) {
+            return false;
+        }
+        return true;
     }
 
     async ethernetIsAlive() {
