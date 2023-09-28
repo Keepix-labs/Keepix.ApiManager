@@ -46,3 +46,7 @@
       command: pyaccesspoint --config start
       become: yes
       ignore_errors: yes
+
+    - name: Enable Wi-Fi
+      command: nmcli radio wifi on
+      ignore_errors: yes

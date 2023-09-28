@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { WifiService } from './shared/wifi.service';
+import { WapService } from './shared/wap.service';
 
 @Controller('app')
 export class ApiController {
 
-    constructor(private wifiService: WifiService) {}
+    constructor(private wapService: WapService) {}
 
     @Get()
     get() {
@@ -16,8 +16,13 @@ export class ApiController {
         return 'OK';
     }
 
+    @Get('wifi/list')
+    async wifiList() {
+        return await this.wapService.getWifiList();
+    }
+
     @Post('wifi')
     async setWifi(@Body() body: { ssid: string, password: string }) {
-        return await this.wifiService.connect(body.ssid, body.password);
+        return await this.wapService.connectToWifi(body.ssid, body.password);
     }
 }
