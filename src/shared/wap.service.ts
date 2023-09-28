@@ -11,7 +11,6 @@ export class WapService {
 
     private ssid: string = 'keepix';
     private wpa_passphrase: string = 'keepixpassword1234';
-    private wapIsActive: boolean = false;
     private running: boolean = false;
     private lastTimeEthernetAlive: number = 0;
     private firstTimeRunning: boolean = true;
@@ -40,33 +39,56 @@ export class WapService {
                 this.firstTimeRunning = false;
             }
 
+            let hasWifiActivated = await this.wifiIsActive();
+            let hasWifiConnectedOnBox = await this.hasWifiConnectedOnBox();
             let ethernetIsAlive = await this.ethernetIsAlive();
+            let hotSpotIsActive = await this.hotSpotIsActive();
 
             if (ethernetIsAlive) {
                 this.lastTimeEthernetAlive = moment().toDate().getTime();
             }
 
+            if (hotSpotIsActive && ethernetIsAlive) {
+                await this.stopHotSpot();
+                return ;
+            }
+
+            if (ethernetIsAlive && (hasWifiActivated == false || hasWifiConnectedOnBox == false)) {
+                // Connexion Filaire OK
+                return ;
+            }
+            if (ethernetIsAlive && hasWifiActivated && hasWifiConnectedOnBox) {
+                // Connexion Wifi OK
+                return ;
+            }
+            
+            // If no internet and connected to wifi waiting 30 min.
+            if (!ethernetIsAlive
+                && hasWifiActivated
+                && hasWifiConnectedOnBox
+                && moment(this.lastTimeEthernetAlive).add(29, 'minutes').isAfter(moment())) {
+                    console.log('Internet Disconnected Waiting ...');
+                return ;
+            }
+
+            // no Internet and Wifi SSID and password Already Saved.
             if (ethernetIsAlive == false && this.wifiSSID != undefined) {
                 if ((await this.connectToWifi(this.wifiSSID, this.wifiPassword))) {
                     ethernetIsAlive = await this.ethernetIsAlive();
                 }
             }
-
-            //&& moment(this.ethernetService.lastTimeAlive).add(30, 'seconds').isBefore(moment()
-            const wapIsActive = await this.isActive();
-            // when no internet since 30min start wap
-            if (!ethernetIsAlive && !wapIsActive) {
-                await this.startHotSpot();
-                this.wapIsActive = await this.isActive();
-                console.log('WAP START:', this.wapIsActive);
+            
+            // No HotSpot
+            if (!ethernetIsAlive && !hotSpotIsActive) {
+                const hostSpotIsRunning = await this.startHotSpot();
+                console.log('HotSpot Started:', hostSpotIsRunning);
             }
 
+            // if no wifi radio set on the radio wifi
             const wifiIsActive = await this.wifiIsActive();
-
             if (ethernetIsAlive == false && wifiIsActive == false) {
                 await this.bashService.execWrapper('nmcli radio wifi on');
             }
-
         } catch (e) {
             console.error('WAP ERROR', e);
         }
@@ -74,17 +96,25 @@ export class WapService {
         console.log(`Wap Service Running Finished`);
     }
 
-    async isActive() {
+    async hasWifiConnectedOnBox() {
+        const stdout = (await this.bashService.execWrapper('iw wlan0 info')) ?? '';
+
+        if (stdout.toLowerCase().includes('ssid')
+            && !stdout.toLowerCase().includes('keepix')) {
+            return true;
+        }
+        return false;
+    }
+
+    async hotSpotIsActive() {
         const stdout = (await this.bashService.execWrapper('iw wlan0 info')) ?? '';
 
         console.log('iw:', stdout);
 
         if (stdout.toLowerCase().includes('ssid') && stdout.toLowerCase().includes('keepix')) {
-            this.wapIsActive = true;
-        } else {
-            this.wapIsActive = false;
+            return true;
         }
-        return this.wapIsActive;
+        return false;
     }
 
     async startHotSpot() {
@@ -102,7 +132,7 @@ export class WapService {
         
         await this.bashService.execWrapper(`systemctl restart networking`);
 
-        const wapIsActive = await this.isActive();
+        const wapIsActive = await this.hotSpotIsActive();
 
         if (wapIsActive == true) {
             if (this.ledWapEnabledInterval != undefined) {
@@ -138,7 +168,7 @@ export class WapService {
         await this.bashService.execWrapper(`killall dnsmasq`);
         await this.bashService.execWrapper(`sysctl -w net.ipv4.ip_forward=0`);
 
-        const wapIsActive = await this.isActive();
+        const wapIsActive = await this.hotSpotIsActive();
 
         console.log(`HotSpot Disabled=${!wapIsActive}`);
 
@@ -198,8 +228,8 @@ export class WapService {
             return false;
         }
 
-        const wapIsActive = await this.isActive();
-        if (wapIsActive) {
+        const hotSpotIsActive = await this.hotSpotIsActive();
+        if (hotSpotIsActive) {
             this.stopHotSpot().then(() => { console.log('hotspot stopped'); });
         }
         return true;
