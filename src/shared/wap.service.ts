@@ -36,6 +36,13 @@ export class WapService {
 
 
             if (this.firstLoad) {
+                // if hotspot is enabled stop it and reboot the keepix (fixing the potential shudown's).
+                if ((await this.hotSpotIsActive())) {
+                    await this.stopHotSpot(); // force stop hotspot
+                    await this.bashService.execWrapper('reboot'); // reboot
+                    // stay running
+                    return ;
+                }
                 await this.stopHotSpot(); // force stop hotspot
                 if (!(await this.wifiIsActive())) {
                     await this.bashService.execWrapper('nmcli radio wifi on');
