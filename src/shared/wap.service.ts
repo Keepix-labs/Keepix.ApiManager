@@ -38,8 +38,13 @@ export class WapService {
         try {
             this.loadConfig();
 
-            if (moment().subtract(2, 'minutes').isBefore(this.firstLaunchTime)) {
-                console.log('waiting 2 minutes after initial launch');
+            if (moment().subtract(1, 'minutes').isBefore(this.firstLaunchTime)) {
+                console.log('waiting 1 minutes after initial launch');
+                if (!(await this.wifiIsActive())) {
+                    await this.bashService.execWrapper('nmcli radio wifi on');
+                    // wait 2sec
+                    new Promise((resolve) => { setTimeout(() => { resolve(true); }, 2000); });
+                }
                 if (this.ledfirtLoadWaiting == undefined) {
                     this.runLed(100);
                     this.ledfirtLoadWaiting = true;
@@ -50,31 +55,24 @@ export class WapService {
                 }
             }
 
-            if (this.ledfirtLoadWaiting != undefined) {
-                this.ledfirtLoadWaiting = undefined;
-                this.stopLed();
-            }
-
             if (this.firstLoad) {
-                await this.stopHotSpot(); // force stop hotspot
-                if (!(await this.wifiIsActive())) {
-                    await this.bashService.execWrapper('nmcli radio wifi on');
-                    // wait 2sec
-                    new Promise((resolve) => { setTimeout(() => { resolve(true); }, 2000); });
-                }
                 this.lastTimeEthernetAlive = moment().subtract(30, 'minutes').toDate().getTime();
                 this.firstLoad = false;
+                
+                if (this.ledfirtLoadWaiting != undefined) {
+                    this.ledfirtLoadWaiting = undefined;
+                    this.stopLed();
+                }
+                // if hotspot is enabled stop it and reboot the keepix (fixing the potential shutdown's).
+                if ((await this.hotSpotIsActive())) {
+                    await this.stopHotSpot(); // force stop hotspot
+                    await this.bashService.execWrapper('reboot'); // reboot
+                    // stay running
+                    return ;
+                }
                 this.running = false;
                 return ;
             }
-
-            // if hotspot is enabled stop it and reboot the keepix (fixing the potential shutdown's).
-            // if ((await this.hotSpotIsActive()) && (await this.getWifiList()).length == 0) {
-            //     await this.stopHotSpot(); // force stop hotspot
-            //     // await this.bashService.execWrapper('reboot'); // reboot
-            //     // stay running
-            //     return ;
-            // }
 
             let hasWifiActivated = await this.wifiIsActive();
             let hasWifiConnectedOnBox = await this.hasWifiConnectedOnBox();
