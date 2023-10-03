@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { environment } from './environment';
 import { ApiService } from './api.service';
 import { PluginController } from './plugin/plugin.controller';
+import * as fs from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -29,6 +30,10 @@ async function bootstrap() {
       allowedHeaders:"*",
       origin: "*"
   });
+
+  if (fs.existsSync('/root') && !fs.existsSync('/root/.keepix')) {
+    fs.mkdirSync('/root/.keepix');
+  }
 
   await app.listen(9000, "0.0.0.0"); // run api server
   app.get(ApiService).schedule(); // run api Scheduler

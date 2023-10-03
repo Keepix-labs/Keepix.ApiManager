@@ -22,6 +22,8 @@ export class WapService {
     private firstLoad: boolean = true;
     private firstLaunchTime: number = (new Date()).getTime();
 
+    private config: any = {};
+
     constructor(
         private ansibleService: AnsibleService,
         private bashService: BashService) {
@@ -34,15 +36,18 @@ export class WapService {
         console.log(`Wap Service Running`);
         this.running = true;
         try {
+            this.loadConfig();
 
             if (moment().subtract(2, 'minutes').isBefore(this.firstLaunchTime)) {
                 console.log('waiting 2 minutes after initial launch');
-                this.running = false;
                 if (this.ledfirtLoadWaiting == undefined) {
                     this.runLed(100);
                     this.ledfirtLoadWaiting = true;
                 }
-                return ;
+                if ((await this.ethernetIsAlive()) == false) {
+                    this.running = false;
+                    return ;
+                }
             }
 
             if (this.ledfirtLoadWaiting != undefined) {
@@ -59,15 +64,17 @@ export class WapService {
                 }
                 this.lastTimeEthernetAlive = moment().subtract(30, 'minutes').toDate().getTime();
                 this.firstLoad = false;
+                this.running = false;
+                return ;
             }
 
             // if hotspot is enabled stop it and reboot the keepix (fixing the potential shutdown's).
-            if ((await this.hotSpotIsActive()) && (await this.getWifiList()).length == 0) {
-                await this.stopHotSpot(); // force stop hotspot
-                // await this.bashService.execWrapper('reboot'); // reboot
-                // stay running
-                return ;
-            }
+            // if ((await this.hotSpotIsActive()) && (await this.getWifiList()).length == 0) {
+            //     await this.stopHotSpot(); // force stop hotspot
+            //     // await this.bashService.execWrapper('reboot'); // reboot
+            //     // stay running
+            //     return ;
+            // }
 
             let hasWifiActivated = await this.wifiIsActive();
             let hasWifiConnectedOnBox = await this.hasWifiConnectedOnBox();
@@ -123,6 +130,8 @@ export class WapService {
             if (ethernetIsAlive == false && wifiIsActive == false) {
                 await this.bashService.execWrapper('nmcli radio wifi on');
             }
+
+            this.saveConfig();
         } catch (e) {
             console.error('WAP ERROR', e);
         }
@@ -277,5 +286,19 @@ export class WapService {
             clearInterval(this.ledWapEnabledInterval);
             this.ledWapEnabledInterval = undefined;
         }
+    }
+
+    private loadConfig(): any {
+        const path = '/root/.keepix/config-wap.json';
+        if (!fs.existsSync(path)) {
+            fs.writeFileSync(path, this.config);
+        }
+        this.config = JSON.parse(fs.readFileSync(path).toString());
+    }
+
+    private saveConfig() {
+        const path = '/root/.keepix/config-wap.json';
+
+        fs.writeFileSync(path, JSON.stringify(this.config));
     }
 }
