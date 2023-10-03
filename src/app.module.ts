@@ -4,9 +4,10 @@ import { BashService } from './shared/bash.service';
 import { SharedModule } from './shared/shared.module';
 import { ApiService } from './api.service';
 import { ApiController } from './api.controller';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 @Module({
-  imports: [PluginModule, SharedModule],
+  imports: [PluginModule, MonitoringModule, SharedModule],
   controllers: [ApiController],
   providers: [ApiService],
 })

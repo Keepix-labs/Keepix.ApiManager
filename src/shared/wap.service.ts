@@ -19,6 +19,7 @@ export class WapService {
     private ledWapTick = 0;
 
     private firstLoad: boolean = true;
+    private firstLaunchTime: number = (new Date()).getTime();
 
     constructor(
         private ansibleService: AnsibleService,
@@ -33,7 +34,11 @@ export class WapService {
         this.running = true;
         try {
 
-
+            if (moment().subtract(2, 'minutes').isAfter(this.firstLaunchTime)) {
+                console.log('waiting 2 minutes after initial launch');
+                this.running = false;
+                return ;
+            }
 
             if (this.firstLoad) {
                 await this.stopHotSpot(); // force stop hotspot
@@ -49,7 +54,7 @@ export class WapService {
             // if hotspot is enabled stop it and reboot the keepix (fixing the potential shutdown's).
             if ((await this.hotSpotIsActive()) && (await this.getWifiList()).length == 0) {
                 await this.stopHotSpot(); // force stop hotspot
-                await this.bashService.execWrapper('reboot'); // reboot
+                // await this.bashService.execWrapper('reboot'); // reboot
                 // stay running
                 return ;
             }
