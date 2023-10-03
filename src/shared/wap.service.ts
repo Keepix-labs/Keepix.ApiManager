@@ -189,7 +189,7 @@ export class WapService {
 
     async stopHotSpot() {
         this.stopLed();
-        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces-default.config /etc/network/interfaces.config`);
+        await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces-default.config /etc/network/interfaces`);
         await this.bashService.execWrapper(`ip address delete 192.168.1.1/24 dev wlan0`);
         await this.bashService.execWrapper(`systemctl restart networking`);
 
