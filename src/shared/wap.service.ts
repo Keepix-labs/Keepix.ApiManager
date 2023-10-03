@@ -15,6 +15,7 @@ export class WapService {
     private wifiSSID: string = undefined;
     private wifiPassword: string = undefined;
 
+    private ledfirtLoadWaiting = undefined;
     private ledWapEnabledInterval = undefined;
     private ledWapTick = 0;
 
@@ -34,10 +35,19 @@ export class WapService {
         this.running = true;
         try {
 
-            if (moment().subtract(2, 'minutes').isAfter(this.firstLaunchTime)) {
+            if (moment().subtract(2, 'minutes').isBefore(this.firstLaunchTime)) {
                 console.log('waiting 2 minutes after initial launch');
                 this.running = false;
+                if (this.ledfirtLoadWaiting == undefined) {
+                    this.runLed(100);
+                    this.ledfirtLoadWaiting = true;
+                }
                 return ;
+            }
+
+            if (this.ledfirtLoadWaiting != undefined) {
+                this.ledfirtLoadWaiting = undefined;
+                this.stopLed();
             }
 
             if (this.firstLoad) {
@@ -159,18 +169,8 @@ export class WapService {
         const wapIsActive = await this.hotSpotIsActive();
 
         if (wapIsActive == true) {
-            if (this.ledWapEnabledInterval != undefined) {
-                clearInterval(this.ledWapEnabledInterval);
-                this.ledWapEnabledInterval = undefined;
-            }
-            this.ledWapEnabledInterval = setInterval(async () => {
-                if (this.ledWapTick == 1) {
-                    this.ledWapTick = 0;
-                } else {
-                    this.ledWapTick = 1;
-                }
-                await this.bashService.execWrapper(`sh -c "echo ${this.ledWapTick} > /sys/class/leds/user-led1/brightness"`);
-            }, 500);
+            this.stopLed();
+            this.runLed(1000);
         }
 
         console.log(`HotSpot Enabled=${wapIsActive}`);
@@ -179,10 +179,7 @@ export class WapService {
     }
 
     async stopHotSpot() {
-        if (this.ledWapEnabledInterval != undefined) {
-            clearInterval(this.ledWapEnabledInterval);
-            this.ledWapEnabledInterval = undefined;
-        }
+        this.stopLed();
         await this.bashService.execWrapper(`cp ${__dirname}/../scripts/interfaces-default.config /etc/network/interfaces.config`);
         await this.bashService.execWrapper(`ip address delete 192.168.1.1/24 dev wlan0`);
         await this.bashService.execWrapper(`systemctl restart networking`);
@@ -262,5 +259,23 @@ export class WapService {
             this.stopHotSpot().then(() => { console.log('hotspot stopped'); });
         }
         return true;
+    }
+
+    private runLed(delay: number = 1000) {
+        this.ledWapEnabledInterval = setInterval(async () => {
+            if (this.ledWapTick == 1) {
+                this.ledWapTick = 0;
+            } else {
+                this.ledWapTick = 1;
+            }
+            await this.bashService.execWrapper(`sh -c "echo ${this.ledWapTick} > /sys/class/leds/user-led1/brightness"`);
+        }, delay);
+    }
+
+    private stopLed() {
+        if (this.ledWapEnabledInterval != undefined) {
+            clearInterval(this.ledWapEnabledInterval);
+            this.ledWapEnabledInterval = undefined;
+        }
     }
 }

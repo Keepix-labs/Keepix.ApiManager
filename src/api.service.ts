@@ -34,8 +34,8 @@ export class ApiService {
     async run() {
         console.log(`${this.title} Run`);
 
-        await this.firstLoadService.run();
-        await this.wapService.run();
+        // await this.firstLoadService.run();
+        // await this.wapService.run();
     }
 
     log(... args) { if (this.verbose) console.log(... args); }
