@@ -58,7 +58,7 @@ export class WapService {
             if (this.firstLoad) {
                 this.lastTimeEthernetAlive = moment().subtract(30, 'minutes').toDate().getTime();
                 this.firstLoad = false;
-                
+
                 if (this.ledfirtLoadWaiting != undefined) {
                     this.ledfirtLoadWaiting = undefined;
                     this.stopLed();
@@ -265,6 +265,7 @@ export class WapService {
         if (hotSpotIsActive) {
             this.stopHotSpot().then(() => { console.log('hotspot stopped'); });
         }
+        this.stopLed();
         return true;
     }
 
