@@ -291,7 +291,7 @@ export class WapService {
     private loadConfig(): any {
         const path = '/root/.keepix/config-wap.json';
         if (!fs.existsSync(path)) {
-            fs.writeFileSync(path, this.config);
+            fs.writeFileSync(path, JSON.stringify(this.config));
         }
         this.config = JSON.parse(fs.readFileSync(path).toString());
     }
