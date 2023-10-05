@@ -1,13 +1,15 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { WapService } from './shared/wap.service';
+import { BashService } from './shared/bash.service';
 
 @Controller('app')
 export class ApiController {
 
     private name: string = 'Keepix';
 
-    constructor(private wapService: WapService) {
-
+    constructor(
+        private wapService: WapService,
+        private bashService: BashService) {
     }
 
     @Get()
@@ -33,7 +35,9 @@ export class ApiController {
 
     @Get('reset')
     async reset() {
-        this.wapService.stopHotSpot().then(() => {});
+        this.wapService.stopHotSpot().then(async () => {
+            await this.bashService.execWrapper('reboot'); // reboot
+        });
         return true;
     }
 }
