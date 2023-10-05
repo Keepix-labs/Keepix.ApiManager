@@ -30,4 +30,10 @@ export class ApiController {
         this.name = body.name;
         return await this.wapService.connectToWifi(body.ssid, body.password);
     }
+
+    @Get('reset')
+    async reset() {
+        this.wapService.stopHotSpot().then(() => {});
+        return true;
+    }
 }
