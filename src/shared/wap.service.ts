@@ -91,11 +91,13 @@ export class WapService {
 
             if (ethernetIsAlive && (hasWifiActivated == false || hasWifiConnectedOnBox == false)) {
                 // Connexion Filaire OK
+                this.stopLed();
                 this.running = false;
                 return ;
             }
             if (ethernetIsAlive && hasWifiActivated && hasWifiConnectedOnBox) {
                 // Connexion Wifi OK
+                this.stopLed();
                 this.running = false;
                 return ;
             }
