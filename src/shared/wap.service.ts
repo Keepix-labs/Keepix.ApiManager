@@ -102,6 +102,11 @@ export class WapService {
                 return ;
             }
             
+            // display network aliveness informations
+            if (ethernetIsAlive && moment().subtract(30, 'seconds').isBefore(moment(this.lastTimeEthernetAlive))) {
+                console.log(`Ethernet is alive, no need to worry, the keepix is running smoothly...`)
+            }                     
+
             // If no internet and connected to wifi waiting 30 min.
             if (!ethernetIsAlive
                 && hasWifiActivated
@@ -152,7 +157,7 @@ export class WapService {
     async hotSpotIsActive() {
         const stdout = (await this.bashService.execWrapper('iw wlan0 info')) ?? '';
 
-        console.log('iw:', stdout);
+        //console.log('iw:', stdout);
 
         if (stdout.toLowerCase().includes('ssid') && stdout.toLowerCase().includes('keepix')) {
             return true;
