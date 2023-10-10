@@ -72,44 +72,41 @@ export class EthProofOfStakeController {
     async formDashboard(@Request() req) {
         return {
             componentName: 'proofOfStakeDashBoard',
-            title: 'DashBoard',
-            values: {
-                title: this.title,
-                subTitle: this.subTitle,
-                description: this.description,
-                poolStateEndpoint: '/state',
-                installed: this.installed,
-                state: await this.getState(),
-                alerts: ['Fake Alert empty if no alert.'],
-                APY: {
-                    '7d': '5.00%',
-                    '30d': '5.00%',
-                    '1Y': '5.00%',
-                },
-                locked: {
-                    'ETH': '32.00',
-                    'RPL': '0'
-                },
-                stakingType: 'FULL',
-                rewards: {
-                    '24h': '0.0012524352642',
-                    '7d': '0.0372524352642',
-                    'total': '0.2372524352642'
-                },
-                memory: await getDiskSpaceInGoString(),
-                grafanaLink: `http://${req.headers.host.split(':')[0]}:5000/grafana`,
-                etherScanLink: `https://etherscan.io/address/${this.wallet.address}`,
-                beanconScanLink: `https://beaconscan.com/validator/0x88841e426f271030ad2257537f4eabd216b891da850c1e0e2b92ee0d6e2052b1dac5f2d87bef51b8ac19d425ed024dd1`,
-                
-                // manage nodes
-                ipcLogsStreamEndpoint: `/ipc-stream`,
-                ipcPostCommandLineEndpoint: `/ipc-cmd`,
+            title: this.title,
+            subTitle: this.subTitle,
+            description: this.description,
+            poolStateEndpoint: '/state',
+            installed: this.installed,
+            state: await this.getState(),
+            alerts: ['Fake Alert empty if no alert.'],
+            APY: {
+                '7d': '5.00%',
+                '30d': '5.00%',
+                '1Y': '5.00%',
+            },
+            locked: {
+                'ETH': '32.00',
+                'RPL': '0'
+            },
+            stakingType: 'FULL',
+            rewards: {
+                '24h': '0.0012524352642',
+                '7d': '0.0372524352642',
+                'total': '0.2372524352642'
+            },
+            memory: await getDiskSpaceInGoString(),
+            grafanaLink: `http://${req.headers.host.split(':')[0]}:5000/grafana`,
+            etherScanLink: `https://etherscan.io/address/${this.wallet.address}`,
+            beanconScanLink: `https://beaconscan.com/validator/0x88841e426f271030ad2257537f4eabd216b891da850c1e0e2b92ee0d6e2052b1dac5f2d87bef51b8ac19d425ed024dd1`,
+            
+            // manage nodes
+            ipcLogsStreamEndpoint: `/ipc-stream`,
+            ipcPostCommandLineEndpoint: `/ipc-cmd`,
 
-                stopEndpoint: `/stop`,
-                startEndpoint: `/start`,
-                uninstallEndpoint: `/uninstall`,
-                withdrawPostRewardsEndpoint: `/withdraw-rewards`
-            }
+            stopEndpoint: `/stop`,
+            startEndpoint: `/start`,
+            uninstallEndpoint: `/uninstall`,
+            withdrawPostRewardsEndpoint: `/withdraw-rewards`
         };
     }
 
@@ -120,34 +117,45 @@ export class EthProofOfStakeController {
     @Get('page/1')
     async formOne() {
         return {
-            componentName: 'proofOfStakeAmount',
             title: 'How many ETH do you want stake?',
-            nextPage: '/page/2?amount=$amount',
-            values: {
-                amount: {
-                    defaultValue: '8',
-                    values: [{
-                        value: '8',
-                        loan: '24',
-                        costOfLoan: (24 * 11 / 100).toFixed(2), // 11% (minimum of 10%)
-                        rewardCommissions: '14' // 14% on 8 ETH staking
-                    }, {
-                        value: '16',
-                        loan: '16',
-                        costOfLoan: (16 * 11 / 100).toFixed(2), // 11% (minimum of 10%)
-                        rewardCommissions: '20' // 20% on 16 ETH staking
-                    }, {
-                        value: '32',
-                        loan: '0',
-                        costOfLoan: 0,
-                        rewardCommissions: '0'
-                    }]
-                }
+            amount: {
+                defaultValue: '8',
+                values: [{
+                    value: '8',
+                    loan: '24',
+                    costOfLoan: (24 * 11 / 100).toFixed(2), // 11% (minimum of 10%)
+                    rewardCommissions: '14' // 14% on 8 ETH staking
+                }, {
+                    value: '16',
+                    loan: '16',
+                    costOfLoan: (16 * 11 / 100).toFixed(2), // 11% (minimum of 10%)
+                    rewardCommissions: '20' // 20% on 16 ETH staking
+                }, {
+                    value: '32',
+                    loan: '0',
+                    costOfLoan: 0,
+                    rewardCommissions: '0'
+                }]
             }
         };
     }
 
     @Get('page/2')
+    async formWallet(@Query() query) {
+
+        const amount = query['amount'];
+        
+        return {
+            title: `Save your wallet ${this.wallet.address}`,
+            amount: amount,
+            currency: 'ETH',
+            address: this.wallet.address,
+            retrieveWalletSecretEndpoint: '/wallet-secret',
+            seedPhrase: 'mot1 mot2 mot3 mot4 mot5 mot6 mot1 mot2 mot3 mot4 mot5 mot6 mot1 mot2 mot3 mot4 mot5 mot6 mot1 mot2 mot3 mot4 mot5 mot6'
+        };
+    }
+
+    @Get('page/3')
     async formTransfer(@Query() query) {
 
         const amount = query['amount'];
@@ -165,24 +173,18 @@ export class EthProofOfStakeController {
         transferNeed = (Number(transferNeed) + Number((Number(transferNeed) * 0.1 / 100).toFixed(2))).toFixed(2);
 
         return {
-            componentName: 'proofOfStakeDeposit',
             title: `Transfer ${transferNeed} to this address ${this.wallet.address}`,
-            nextPage: '/page/3',
-            values: {
-                amount: transferNeed,
-                currency: 'ETH',
-                address: this.wallet.address,
-                retrieveWalletSecretEndpoint: '/wallet-secret'
-            }
+            amount: transferNeed,
+            currency: 'ETH',
+            address: this.wallet.address,
+            retrieveWalletSecretEndpoint: '/wallet-secret'
         };
     }
 
-    @Get('page/3')
+    @Get('page/4')
     async formDepositState(@Req() request: Request) {
         return {
-            componentName: 'proofOfStakeDepositState',
             title: 'Transfer Detection',
-            nextPage: '/page/4',
             values: {
                 poolStateEndpoint: '/deposit-state'
             }
@@ -216,16 +218,12 @@ export class EthProofOfStakeController {
         };
     }
 
-    @Get('page/4')
+    @Get('page/5')
     async formInstallState(@Req() request: Request) {
         return {
-            componentName: 'proofOfStakeInstallation',
             title: 'Setup In Progress',
-            nextPage: '/page/0',
-            values: {
-                poolStateEndpoint: '/install-state',
-                whenFinished: '/page/0'
-            }
+            poolStateEndpoint: '/install-state',
+            whenFinished: '/page/0'
         };
     }
 
