@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { BashService } from "./bash.service";
-import { PropertiesService } from "./properties.service";
+import { PropertiesService } from "./storage/properties.service";
 import * as fs from 'fs';
 import { LoggerService } from "./logger.service";
 

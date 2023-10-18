@@ -29,6 +29,6 @@ export class ApiService {
     async run() {
         this.loggerService.log(`${this.title} Run`);
         await this.firstLoadService.run();
-        await this.wapService.run();
+        //await this.wapService.run();
     }
 }

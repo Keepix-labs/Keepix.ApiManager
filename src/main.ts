@@ -5,8 +5,9 @@ import { environment } from './environment';
 import { ApiService } from './api.service';
 import { PluginController } from './plugin/plugin.controller';
 import * as fs from 'fs';
-import { PropertiesService } from './shared/properties.service';
+import { PropertiesService } from './shared/storage/properties.service';
 import { LoggerService } from './shared/logger.service';
+import { AnalyticsService } from './shared/storage/analytics.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -51,6 +52,7 @@ async function bootstrap() {
   // load Properties at startUp
   app.get(LoggerService).log(`------------------- Loaders ----------------------`);
   app.get(PropertiesService).load();
+  app.get(AnalyticsService).load();
 
   app.get(LoggerService).log(`------------------- Running ----------------------`);
   await app.listen(environment.port, environment.ip); // run api server

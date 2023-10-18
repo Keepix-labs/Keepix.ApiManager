@@ -3,8 +3,9 @@ import { BashService } from './bash.service';
 import { WapService } from './wap.service';
 import { AnsibleService } from './ansible.service';
 import { FirstLoadService } from './first-load.service';
-import { PropertiesService } from './properties.service';
+import { PropertiesService } from './storage/properties.service';
 import { LoggerService } from './logger.service';
+import { AnalyticsService } from './storage/analytics.service';
 
 @Module({
   controllers: [],
@@ -14,7 +15,8 @@ import { LoggerService } from './logger.service';
     AnsibleService,
     FirstLoadService,
     PropertiesService,
-    LoggerService
+    LoggerService,
+    AnalyticsService
   ],
   exports: [
     BashService,
@@ -22,7 +24,8 @@ import { LoggerService } from './logger.service';
     AnsibleService,
     FirstLoadService,
     PropertiesService,
-    LoggerService
+    LoggerService,
+    AnalyticsService
   ]
 })
 export class SharedModule {}
