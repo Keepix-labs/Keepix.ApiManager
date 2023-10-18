@@ -10,3 +10,6 @@ source ~/.bashrc
 nvm install v18.18.0
 git clone https://github.com/Keepix-labs/Keepix.ApiManager.git ~/Keepix.ApiManager
 npm install -g pm2
+cd ~/Keepix.ApiManager
+npm install
+pm2 start pm2.config.js

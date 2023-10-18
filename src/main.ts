@@ -5,9 +5,22 @@ import { environment } from './environment';
 import { ApiService } from './api.service';
 import { PluginController } from './plugin/plugin.controller';
 import * as fs from 'fs';
+import { PropertiesService } from './shared/properties.service';
+import { LoggerService } from './shared/logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: environment.ENV === 'production' ? ['warn', 'error'] : ['debug', 'log', 'verbose']
+  });
+
+  app.get(LoggerService).log(`--------------------------------------------------`);
+  app.get(LoggerService).log(` ____  __.                   .__`);
+  app.get(LoggerService).log(`|    |/ _|____   ____ ______ |__|__  ___`);
+  app.get(LoggerService).log(`|      <_/ __ \\_/ __ \\\\____ \\|  \\  \\/  /`);
+  app.get(LoggerService).log(`|    |  \\  ___/\\  ___/|  |_| |  |>    < `);
+  app.get(LoggerService).log(`|____|__ \\___  >\\___  >   __/|__/__/\\_ \\`);
+  app.get(LoggerService).log(`        \\/   \\/     \\/|__|            \\/ API ${environment.appVersion}`);
+  app.get(LoggerService).log(`--------------------------------------------------`);
 
   // SWAGGER
   const config = new DocumentBuilder()
@@ -35,7 +48,13 @@ async function bootstrap() {
     fs.mkdirSync('/root/.keepix');
   }
 
-  await app.listen(9000, "0.0.0.0"); // run api server
+  // load Properties at startUp
+  app.get(LoggerService).log(`------------------- Loaders ----------------------`);
+  app.get(PropertiesService).load();
+
+  app.get(LoggerService).log(`------------------- Running ----------------------`);
+  await app.listen(environment.port, environment.ip); // run api server
+  app.get(LoggerService).log(`Api started on ${environment.ip}:${environment.port}`);
   app.get(ApiService).schedule(); // run api Scheduler
   app.get(PluginController).app = app;
 }

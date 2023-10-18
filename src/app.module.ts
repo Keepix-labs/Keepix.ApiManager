@@ -5,9 +5,10 @@ import { SharedModule } from './shared/shared.module';
 import { ApiService } from './api.service';
 import { ApiController } from './api.controller';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
-  imports: [PluginModule, MonitoringModule, SharedModule],
+  imports: [PluginModule, MonitoringModule, SettingsModule, SharedModule],
   controllers: [ApiController],
   providers: [ApiService],
 })

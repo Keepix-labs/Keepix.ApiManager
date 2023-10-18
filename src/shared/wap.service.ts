@@ -5,6 +5,7 @@ import { AnsibleService } from "./ansible.service";
 import * as DHCP from "dhcp";
 import * as hostapd from "wireless-tools/hostapd";
 import { BashService } from "./bash.service";
+import { LoggerService } from "./logger.service";
 
 @Injectable()
 export class WapService {
@@ -22,9 +23,8 @@ export class WapService {
     private firstLoad: boolean = true;
     private firstLaunchTime: number = (new Date()).getTime();
 
-    private config: any = {};
-
     constructor(
+        private loggerService: LoggerService,
         private ansibleService: AnsibleService,
         private bashService: BashService) {
     }
@@ -33,13 +33,11 @@ export class WapService {
         if (this.running) { // skip duplicate running.
             return ;
         }
-        console.log(`Wap Service Running`);
+        this.loggerService.log(`Wap Service Running`);
         this.running = true;
         try {
-            this.loadConfig();
-
             if (moment().subtract(1, 'minutes').isBefore(this.firstLaunchTime)) {
-                console.log('waiting 1 minutes after initial launch');
+                this.loggerService.log('waiting 1 minutes after initial launch');
                 if (!(await this.wifiIsActive())) {
                     await this.bashService.execWrapper('nmcli radio wifi on');
                     // wait 2sec
@@ -107,7 +105,7 @@ export class WapService {
                 && hasWifiActivated
                 && hasWifiConnectedOnBox
                 && moment(this.lastTimeEthernetAlive).add(29, 'minutes').isAfter(moment())) {
-                    console.log('Internet Disconnected Waiting ...');
+                    this.loggerService.log('Internet Disconnected Waiting ...');
                     this.running = false;
                 return ;
             }
@@ -122,7 +120,7 @@ export class WapService {
             // No HotSpot
             if (!ethernetIsAlive && !hotSpotIsActive) {
                 const hostSpotIsRunning = await this.startHotSpot();
-                console.log('HotSpot Started:', hostSpotIsRunning);
+                this.loggerService.log('HotSpot Started:', hostSpotIsRunning);
             }
 
             // if no wifi radio set on the radio wifi
@@ -130,13 +128,11 @@ export class WapService {
             if (ethernetIsAlive == false && wifiIsActive == false) {
                 await this.bashService.execWrapper('nmcli radio wifi on');
             }
-
-            this.saveConfig();
         } catch (e) {
             console.error('WAP ERROR', e);
         }
         this.running = false;
-        console.log(`Wap Service Running Finished`);
+        this.loggerService.log(`Wap Service Running Finished`);
     }
 
     async hasWifiConnectedOnBox() {
@@ -152,7 +148,7 @@ export class WapService {
     async hotSpotIsActive() {
         const stdout = (await this.bashService.execWrapper('iw wlan0 info')) ?? '';
 
-        console.log('iw:', stdout);
+        this.loggerService.log('iw:', stdout);
 
         if (stdout.toLowerCase().includes('ssid') && stdout.toLowerCase().includes('keepix')) {
             return true;
@@ -182,7 +178,7 @@ export class WapService {
             this.runLed(1000);
         }
 
-        console.log(`HotSpot Enabled=${wapIsActive}`);
+        this.loggerService.log(`HotSpot Enabled=${wapIsActive}`);
 
         return wapIsActive;
     }
@@ -200,7 +196,7 @@ export class WapService {
 
         const wapIsActive = await this.hotSpotIsActive();
 
-        console.log(`HotSpot Disabled=${!wapIsActive}`);
+        this.loggerService.log(`HotSpot Disabled=${!wapIsActive}`);
 
         if (wapIsActive) {
             return false;
@@ -265,7 +261,7 @@ export class WapService {
 
         const hotSpotIsActive = await this.hotSpotIsActive();
         if (hotSpotIsActive) {
-            this.stopHotSpot().then(() => { console.log('hotspot stopped'); });
+            this.stopHotSpot().then(() => { this.loggerService.log('hotspot stopped'); });
         }
         this.stopLed();
         return true;
@@ -287,19 +283,5 @@ export class WapService {
             clearInterval(this.ledWapEnabledInterval);
             this.ledWapEnabledInterval = undefined;
         }
-    }
-
-    private loadConfig(): any {
-        const path = '/root/.keepix/config-wap.json';
-        if (!fs.existsSync(path)) {
-            fs.writeFileSync(path, JSON.stringify(this.config));
-        }
-        this.config = JSON.parse(fs.readFileSync(path).toString());
-    }
-
-    private saveConfig() {
-        const path = '/root/.keepix/config-wap.json';
-
-        fs.writeFileSync(path, JSON.stringify(this.config));
     }
 }

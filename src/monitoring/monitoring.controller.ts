@@ -10,8 +10,10 @@ export class MonitoringController {
     @Get('keepix')
     async get() {
         const spaceDisk: any = await getDiskSpaceInGoString();
+        const cpuPercentage = (os.loadavg()[0]).toFixed(2);
+
         return {
-            cpu: `${(os.loadavg()[0]).toFixed(2)} %`, // 1 min average CPU percentage
+            cpu: `${cpuPercentage} %`, // 1 min average CPU percentage
             memory: spaceDisk
         };
     }
