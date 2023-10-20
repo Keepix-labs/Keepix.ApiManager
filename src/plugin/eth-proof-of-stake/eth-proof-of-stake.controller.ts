@@ -182,7 +182,7 @@ export class EthProofOfStakeController {
     }
 
     @Get('page/4')
-    async formDepositState(@Req() request: Request) {
+    async formDepositState() {
         return {
             title: 'Transfer Detection',
             values: {
@@ -219,7 +219,7 @@ export class EthProofOfStakeController {
     }
 
     @Get('page/5')
-    async formInstallState(@Req() request: Request) {
+    async formInstallState() {
         return {
             title: 'Setup In Progress',
             poolStateEndpoint: '/install-state',

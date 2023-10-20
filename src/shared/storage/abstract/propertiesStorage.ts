@@ -6,8 +6,8 @@ export class PropertiesStorage implements PropertiesStorageInterface {
     protected propertiesMap: any = undefined;
     protected propertiesFilePath: any;
 
-    public getProperty(key: string): any {
-        return this.propertiesMap[key];
+    public getProperty(key: string, defaultValue: any = undefined): any {
+        return this.propertiesMap[key] ?? defaultValue;
     }
 
     public setProperty(key: string, value: any): void {
@@ -26,7 +26,7 @@ export class PropertiesStorage implements PropertiesStorageInterface {
     }
 
     protected saveProperties() {
-        const stringFileData = JSON.stringify(this.propertiesMap);
+        const stringFileData = JSON.stringify(this.propertiesMap, null, 4);
 
         fs.writeFileSync(this.propertiesFilePath, stringFileData);
     }

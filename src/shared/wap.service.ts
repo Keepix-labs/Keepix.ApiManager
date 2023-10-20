@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import * as moment from "moment";
+import moment from "moment";
 import * as fs from 'fs';
 import { AnsibleService } from "./ansible.service";
 import * as DHCP from "dhcp";

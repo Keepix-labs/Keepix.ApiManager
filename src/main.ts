@@ -20,8 +20,8 @@ async function bootstrap() {
   app.get(LoggerService).log(`|      <_/ __ \\_/ __ \\\\____ \\|  \\  \\/  /`);
   app.get(LoggerService).log(`|    |  \\  ___/\\  ___/|  |_| |  |>    < `);
   app.get(LoggerService).log(`|____|__ \\___  >\\___  >   __/|__/__/\\_ \\`);
-  app.get(LoggerService).log(`        \\/   \\/     \\/|__|            \\/ API ${environment.appVersion}`);
-  app.get(LoggerService).log(`--------------------------------------------------`);
+  app.get(LoggerService).log(`        \\/   \\/     \\/| /             \\/ API ${environment.appVersion}`);
+  app.get(LoggerService).log(`----------------------|/--------------------------`);
 
   // SWAGGER
   const config = new DocumentBuilder()

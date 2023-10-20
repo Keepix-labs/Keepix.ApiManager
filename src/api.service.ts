@@ -6,6 +6,7 @@ import * as moment from 'moment';
 import { AnsibleService } from './shared/ansible.service';
 import { FirstLoadService } from './shared/first-load.service';
 import { LoggerService } from './shared/logger.service';
+import { PluginService } from './plugin/plugin.service';
 
 @Injectable()
 export class ApiService {
@@ -15,20 +16,32 @@ export class ApiService {
     constructor(
         private loggerService: LoggerService,
         private wapService: WapService,
-        private firstLoadService: FirstLoadService) {
+        private firstLoadService: FirstLoadService,
+        private pluginService: PluginService) {
     }
 
     schedule() {
         this.loggerService.log(`${this.title} Start`);
+        schedule.scheduleJob('*/10 * * * *' /* 10min */, () => this.runEach10Minutes());
         setInterval(() => {
-            this.run();
+            this.runEach10Seconds();
         }, 1000 * 10); // 10 sec
-        this.run(); // first run
+        this.initialRun(); // first run
     }
 
-    async run() {
-        this.loggerService.log(`${this.title} Run`);
+    async initialRun() {
+        this.loggerService.log(`${this.title} (Initial) Run`);
+        await this.runEach10Seconds();
+        await this.runEach10Minutes();
+    }
+
+    async runEach10Seconds() {
+        this.loggerService.log(`${this.title} (10s) Run`);
         await this.firstLoadService.run();
-        await this.wapService.run();
+    }
+
+    async runEach10Minutes() {
+        this.loggerService.log(`${this.title} (10min) Run`);
+        await this.pluginService.run();
     }
 }
