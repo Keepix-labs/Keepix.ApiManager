@@ -18,10 +18,11 @@ export class PluginController {
     @Get('test')
     async test() {
         const dto = JSON.stringify({
-            key: "example",
-            url: "http://51.255.75.224:8545"
+            key: "exposed-functions"
         });
-        return await this.pluginService.plugins['example'].exports.Plugin.Run(dto);
+        let { result } = await this.pluginService.plugins['wasm.example'].exec(dto);
+
+        return result;
     }
 
     // @Get('list')

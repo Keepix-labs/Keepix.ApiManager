@@ -4,6 +4,7 @@ import { LoggerService } from "src/shared/logger.service";
 import { PropertiesService } from "src/shared/storage/properties.service";
 import * as fs from 'fs';
 import { BashService } from "src/shared/bash.service";
+import { exec } from 'child_process';
 
 @Injectable()
 export class PluginService {
@@ -11,6 +12,10 @@ export class PluginService {
     public plugins: any = {};
 
     private title: string = "Keepix-Plugin-Service";
+
+    private os = process.platform.replace("darwin", "osx");
+    private arch = process.arch;
+    private targetPluginTargzName = `${this.os}-${this.arch}`;
 
     constructor(
         private loggerService: LoggerService,
@@ -25,19 +30,23 @@ export class PluginService {
         await this.loadInstalledPlugins();
 
         const internalPlugins = this.propertiesService.getProperty('plugins', []);
-        await this.installPlugin(internalPlugins[0], async (filePath, version, downloadStatus) => {
-            console.log(filePath, version, downloadStatus);
+        await this.installPlugin(internalPlugins[0], async (fileTarGzPath, version, downloadStatus) => {
+            console.log(fileTarGzPath, version, downloadStatus);
             
 
             const decompress = require('decompress');
             const decompressTargz = require('decompress-targz');
-            
-            decompress(filePath, `./.plugins/${internalPlugins[0].id}`, {
+            await decompress(fileTarGzPath, `./.plugins/${internalPlugins[0].id}`, {
                 plugins: [
                     decompressTargz()
                 ]
-            }).then(() => {
-                console.log('Files decompressed');
+            });
+            console.log('Files decompressed');
+            
+            // remove tar.gz file
+            fs.rmSync(fileTarGzPath, {
+                recursive: true,
+                force: true
             });
 
             internalPlugins[0].version = version;
@@ -53,12 +62,20 @@ export class PluginService {
 
         for (let plugin of internalPlugins) {
             if (this.plugins[plugin.id] == undefined && plugin.installed == true) {
-                const { wasm } = await import(`../../../.plugins/${plugin.id}/dist/wasm.js`);
-                const dotnetExports = await wasm(false);
-
                 this.plugins[plugin.id] = {
                     ... plugin,
-                    exports: dotnetExports
+                    exec: async (arg) => {
+                        return await new Promise((resolve) => {
+                            exec(`./.plugins/${plugin.id}/dist/${this.targetPluginTargzName}/${plugin.id} '${arg}'`, (error, stdout, stderr) => {
+                                const result = JSON.parse(stdout);
+    
+                                resolve({
+                                    result: JSON.parse(result.jsonResult),
+                                    stdOut: result.stdOut
+                                });
+                            });
+                        });
+                    }
                 };
             }
         }
@@ -73,7 +90,7 @@ export class PluginService {
         }
         const Downloader = require("nodejs-file-downloader");
         const downloader = new Downloader({
-            url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/wasm.tar.gz`,
+            url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/${this.targetPluginTargzName}.tar.gz`,
             directory: `.plugins/${plugin.id}`, //This folder will be created, if it doesn't exist.   
         });
         
