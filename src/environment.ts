@@ -16,7 +16,7 @@ export const environment = {
             ['Access-Control-Allow-Headers', 'Content-Type, Accept']
         ]
     },
-    plateform: process.platform.replace("darwin", "osx"),
+    plateform: process.platform.replace("darwin", "osx").replace("win32", "win"),
     arch: process.arch,
-    plateformId: `${process.platform.replace("darwin", "osx")}-${process.arch}`
+    plateformId: `${process.platform.replace("darwin", "osx").replace("win32", "win")}-${process.arch}`
 };
