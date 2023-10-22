@@ -1,7 +1,10 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { WapService } from './shared/wap.service';
 import { BashService } from './shared/bash.service';
+import { ApiTags } from '@nestjs/swagger';
+import { environment } from './environment';
 
+@ApiTags('App')
 @Controller('app')
 export class ApiController {
 
@@ -39,5 +42,10 @@ export class ApiController {
             await this.bashService.execWrapper('reboot'); // reboot
         });
         return true;
+    }
+
+    @Get('plateform-id')
+    async plateformId() {
+        return environment.plateformId;
     }
 }

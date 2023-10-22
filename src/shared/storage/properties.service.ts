@@ -29,4 +29,8 @@ export class PropertiesService extends PropertiesStorage {
         this.loadProperties();
         this.loggerService.log(`(${Object.keys(this.propertiesMap).length}) Properties Loaded`);
     }
+
+    public save() {
+        this.saveProperties();
+    }
 }

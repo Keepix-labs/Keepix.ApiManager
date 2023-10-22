@@ -1,10 +1,8 @@
 import { Body, Controller, Get, Post, Query, Req, Request, Response, StreamableFile, UsePipes, ValidationPipe } from '@nestjs/common';
-import { EthProofOfStakeService } from './eth-proof-of-stake.service';
-import { InstallDto } from './dto/install';
 import { ethers } from 'ethers';
 import { getDiskSpaceInGoString } from 'src/shared/utils/disk-space';
 
-@Controller('plugin/eth-proof-of-stake')
+// @Controller('plugin/eth-proof-of-stake')
 export class EthProofOfStakeController {
 
     public title = 'Ethereum';
@@ -13,13 +11,12 @@ export class EthProofOfStakeController {
     public installed = false;
     public state = 'Stopped';
 
-    constructor(
-        private ethProofOfStakeService: EthProofOfStakeService) {
+    constructor() {
     }
 
     // temporary:
     private wallet: any = ethers.Wallet.createRandom();
-    @Get('wallet-secret')
+    // @Get('wallet-secret')
     getWalletSecret(@Req() req, @Response({ passthrough: true }) res) {
         res.set({
             'Content-Type': 'application/json'
@@ -29,29 +26,29 @@ export class EthProofOfStakeController {
         })));
     }
 
-    @Get('installed')
+    // @Get('installed')
     async getStatus() {
         return this.installed;
     }
 
-    @Get('state')
+    // @Get('state')
     async getState() {
         return this.state;
     }
 
-    @Get('start')
+    // @Get('start')
     async start() {
         this.state = 'Running';
         return true;
     }
 
-    @Get('stop')
+    // @Get('stop')
     async stop() {
         this.state = 'Stopped';
         return true;
     }
 
-    @Post('withdraw-rewards')
+    // @Post('withdraw-rewards')
     async withdrawRewards(@Body() data: any) {
         return true;
     }
@@ -68,7 +65,7 @@ export class EthProofOfStakeController {
      * Lien vers les divers explorers t'elle que etherscan (address de sont wallet), lien vers explorer Validateur, Etat de l'app Running/Stopped,  Dedier un Espace message d'Alert, Dedier un espace ipc commands (petit shell permettant de d'executer des commandes sur les noeuds).
      */
 
-    @Get('page/0')
+    // @Get('page/0')
     async formDashboard(@Request() req) {
         return {
             componentName: 'proofOfStakeDashBoard',
@@ -114,7 +111,7 @@ export class EthProofOfStakeController {
      * Rocket pool documentation of laon and commissions: https://docs.rocketpool.net/guides/atlas/lebs.html
      * @returns Array of components
      */
-    @Get('page/1')
+    // @Get('page/1')
     async formOne() {
         return {
             title: 'How many ETH do you want stake?',
@@ -140,7 +137,7 @@ export class EthProofOfStakeController {
         };
     }
 
-    @Get('page/2')
+    // @Get('page/2')
     async formWallet(@Query() query) {
 
         const amount = query['amount'];
@@ -155,7 +152,7 @@ export class EthProofOfStakeController {
         };
     }
 
-    @Get('page/3')
+    // @Get('page/3')
     async formTransfer(@Query() query) {
 
         const amount = query['amount'];
@@ -181,7 +178,7 @@ export class EthProofOfStakeController {
         };
     }
 
-    @Get('page/4')
+    // @Get('page/4')
     async formDepositState() {
         return {
             title: 'Transfer Detection',
@@ -192,7 +189,7 @@ export class EthProofOfStakeController {
     }
 
     private depositStateMock = { state: 0, count: 0 };
-    @Get('deposit-state')
+    // @Get('deposit-state')
     async depositState() {
         if (this.depositStateMock.count >= 10) {
             this.depositStateMock.count = 0;
@@ -207,7 +204,7 @@ export class EthProofOfStakeController {
     }
 
     private installStateMock = { state: 0, percentage: 0 };
-    @Get('install-state')
+    // @Get('install-state')
     async installState() {
         this.installStateMock.percentage += 5;
         if (this.installStateMock.percentage > 100) {
@@ -218,7 +215,7 @@ export class EthProofOfStakeController {
         };
     }
 
-    @Get('page/5')
+    // @Get('page/5')
     async formInstallState() {
         return {
             title: 'Setup In Progress',
@@ -227,9 +224,8 @@ export class EthProofOfStakeController {
         };
     }
 
-    @Post('install')
-    @UsePipes(new ValidationPipe({ transform: true }))
-    async install(@Body() settings: InstallDto) {
+    // @Post('install')
+    async install(@Body() settings: any) {
 
         // setup wallet into the nodes
         // open ports with upnp (Check Every Days expiration): 30303 TCP/UDP
@@ -243,7 +239,7 @@ export class EthProofOfStakeController {
         return true;
     }
 
-    @Post('uninstall')
+    // @Post('uninstall')
     async uninstall() {
         this.installed = false;
         return true;

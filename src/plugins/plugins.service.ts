@@ -7,15 +7,11 @@ import { BashService } from "src/shared/bash.service";
 import { exec } from 'child_process';
 
 @Injectable()
-export class PluginService {
+export class PluginsService {
 
     public plugins: any = {};
 
-    private title: string = "Keepix-Plugin-Service";
-
-    private os = process.platform.replace("darwin", "osx");
-    private arch = process.arch;
-    private targetPluginTargzName = `${this.os}-${this.arch}`;
+    private title: string = "Keepix-Plugins-Service";
 
     constructor(
         private loggerService: LoggerService,
@@ -26,47 +22,19 @@ export class PluginService {
     async run() {
         this.loggerService.log(`${this.title} Run`);
         await this.detectPluginsAndLatestVersions();
-
         await this.loadInstalledPlugins();
-
-        const internalPlugins = this.propertiesService.getProperty('plugins', []);
-        await this.installPlugin(internalPlugins[0], async (fileTarGzPath, version, downloadStatus) => {
-            console.log(fileTarGzPath, version, downloadStatus);
-            
-
-            const decompress = require('decompress');
-            const decompressTargz = require('decompress-targz');
-            await decompress(fileTarGzPath, `./.plugins/${internalPlugins[0].id}`, {
-                plugins: [
-                    decompressTargz()
-                ]
-            });
-            console.log('Files decompressed');
-            
-            // remove tar.gz file
-            fs.rmSync(fileTarGzPath, {
-                recursive: true,
-                force: true
-            });
-
-            internalPlugins[0].version = version;
-            internalPlugins[0].installed = true;
-            this.propertiesService.setProperty('plugins', internalPlugins);
-
-            await this.loadInstalledPlugins();
-        });
     }
 
-    private async loadInstalledPlugins() {
+    public async loadInstalledPlugins() {
         const internalPlugins = this.propertiesService.getProperty('plugins', []);
 
         for (let plugin of internalPlugins) {
             if (this.plugins[plugin.id] == undefined && plugin.installed == true) {
                 this.plugins[plugin.id] = {
                     ... plugin,
-                    exec: async (arg) => {
+                    exec: async (argObject) => {
                         return await new Promise((resolve) => {
-                            exec(`./.plugins/${plugin.id}/dist/${this.targetPluginTargzName}/${plugin.id} '${arg}'`, (error, stdout, stderr) => {
+                            exec(`./.plugins/${plugin.id}/dist/${environment.plateformId}/${plugin.id} '${JSON.stringify(argObject)}'`, (error, stdout, stderr) => {
                                 const result = JSON.parse(stdout);
     
                                 resolve({
@@ -81,7 +49,39 @@ export class PluginService {
         }
     }
 
-    private async installPlugin(plugin, cb = async (filePath, version, downloadStatus) => {}) {
+    public async downloadAndUnTarPlugin(
+        plugin: any,
+        onDownloaded = () => {},
+        onUnTar = () => {},
+        onInstalled = (version) => {}) {
+        return await new Promise(async (resolve) => {
+            await this.downloadPlugin(plugin, async (fileTarGzPath, version, downloadStatus) => {
+                console.log(fileTarGzPath, version, downloadStatus);
+                onDownloaded();
+    
+                const decompress = require('decompress');
+                const decompressTargz = require('decompress-targz');
+                await decompress(fileTarGzPath, `./.plugins/${plugin.id}`, {
+                    plugins: [
+                        decompressTargz()
+                    ]
+                });
+                console.log('Files decompressed');
+                onUnTar();
+                
+                // remove tar.gz file
+                fs.rmSync(fileTarGzPath, {
+                    recursive: true,
+                    force: true
+                });
+                
+                onInstalled(version);
+                resolve(true);
+            });
+        });
+    }
+
+    private async downloadPlugin(plugin, cb = async (filePath, version, downloadStatus) => {}) {
         if (plugin.latestVersion == undefined) {
             return false;
         }
@@ -90,7 +90,7 @@ export class PluginService {
         }
         const Downloader = require("nodejs-file-downloader");
         const downloader = new Downloader({
-            url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/${this.targetPluginTargzName}.tar.gz`,
+            url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/${environment.plateformId}.tar.gz`,
             directory: `.plugins/${plugin.id}`, //This folder will be created, if it doesn't exist.   
         });
         
