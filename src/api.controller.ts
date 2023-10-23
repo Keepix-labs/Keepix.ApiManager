@@ -1,23 +1,26 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { WapService } from './shared/wap.service';
 import { BashService } from './shared/bash.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { environment } from './environment';
+import * as fs from 'fs';
+import { ApiService } from './api.service';
+import { PropertiesService } from './shared/storage/properties.service';
 
 @ApiTags('App')
 @Controller('app')
 export class ApiController {
 
-    private name: string = 'Keepix';
-
     constructor(
         private wapService: WapService,
-        private bashService: BashService) {
+        private bashService: BashService,
+        private apiService: ApiService,
+        private propertiesService: PropertiesService) {
     }
 
     @Get()
     get() {
-        return this.name;
+        return this.propertiesService.getProperty('keepix-name');
     }
 
     @Get('hello')
@@ -32,7 +35,10 @@ export class ApiController {
 
     @Post('wifi')
     async setWifi(@Body() body: { name: string, ssid: string, password: string }) {
-        this.name = body.name;
+        if (body.name != undefined) {
+            this.propertiesService.setProperty('keepix-name', body.name);
+            this.propertiesService.save();
+        }
         return await this.wapService.connectToWifi(body.ssid, body.password);
     }
 
@@ -47,5 +53,47 @@ export class ApiController {
     @Get('plateform-id')
     async plateformId() {
         return environment.plateformId;
+    }
+
+    @Get('keepix-information')
+    async keepixInformation() {
+        return {
+            version: environment.appVersion,
+            latestVersion: await this.apiService.getLatestVersionOfApiGit()
+        }
+    }
+
+    @ApiQuery({ name: 'version', type: 'string', required: true })
+    @ApiBody({ type: Object })
+    @ApiOperation({ summary: 'Install a new keepix api version.' })
+    @Post('update')
+    async update() {
+        console.log(process.argv.join(' '), process.env);
+        // if (environment.ENV == 'dev') {
+        //     const description = 'Updates not allowed in dev.';
+        //     console.log(description);
+        //     return { success: false, description: description };
+        // }
+        // let latestVersion = await this.apiService.getLatestVersionOfApiGit();
+        // if (environment.appVersion == latestVersion) {
+        //     return { success: false, description: 'Already Up-to-date.' };
+        // }
+        // this.apiService.downloadAndUnTarApi(
+        //     environment.apiManagerRepositoryUrl,
+        //     latestVersion,
+        //     () => {
+        //         console.log('Downloaded');
+        //     },
+        //     () => {
+        //         console.log('Untared');
+        //     },
+        //     (version) => {
+        //         console.log('Done');
+        //     })
+        // .then(async () => {
+        //     console.log('Done, restart');
+        //     await this.bashService.execWrapper('pm2 restart API');
+        // });
+        return { success: true, description: 'Installation Running.' };
     }
 }

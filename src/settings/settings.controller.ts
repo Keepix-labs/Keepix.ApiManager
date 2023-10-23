@@ -1,21 +1,31 @@
-import { Controller, Get, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PropertiesService } from 'src/shared/storage/properties.service';
 
 @ApiTags('Settings')
 @Controller('settings')
 export class SettingsController {
 
-    constructor() {}
+    constructor(private propertiesService: PropertiesService) {}
 
-    // Appliquer un nombre maximum d'app runnable en meme temp
-    @Post('running-apps')
-    async setNumberOfRunningApps() {
-        return '';
+    @Get('')
+    @ApiOperation({ summary: 'Get a settings' })
+    async get() {
+        console.log('KSKSKSKS');
+        return {
+            'keepix-name': this.propertiesService.getProperty('keepix-name')
+        };
     }
 
-    // Enable ou disable les leds
-    @Post('leds')
-    async setLeds() {
-        return '';
+    @ApiBody({ type: Object })
+    @ApiOperation({ summary: 'Set a settings' })
+    @Post('')
+    async set(@Body() body: any) {
+        let keys = Object.keys(body);
+        for (let key of keys) {
+            this.propertiesService.setProperty(key, body[key]);
+        }
+        this.propertiesService.save();
+        return true;
     }
 }
