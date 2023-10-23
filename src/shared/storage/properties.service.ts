@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import * as fs from 'fs';
 import { LoggerService } from "../logger.service";
 import { PropertiesStorage } from "./abstract/propertiesStorage";
+import { environment } from "src/environment";
 
 /**
  * Properties Service
@@ -16,7 +17,7 @@ import { PropertiesStorage } from "./abstract/propertiesStorage";
  */
 @Injectable()
 export class PropertiesService extends PropertiesStorage {
-    protected readonly propertiesFilePath = './properties.json';
+    protected readonly propertiesFilePath = environment.propertiesFilePath[environment.plateform];
     protected propertiesMap: any = undefined;
 
     constructor(

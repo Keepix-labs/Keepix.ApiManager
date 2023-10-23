@@ -22,5 +22,20 @@ export const environment = {
     },
     plateform: process.platform.replace("darwin", "osx").replace("win32", "win"),
     arch: process.arch,
-    plateformId: `${process.platform.replace("darwin", "osx").replace("win32", "win")}-${process.arch}`
+    plateformId: `${process.platform.replace("darwin", "osx").replace("win32", "win")}-${process.arch}`,
+    appDirectory: {
+        'win': `${process.env.APPDATA}\\.keepix`,
+        'osx': `${process.env.HOME}/.keepix`,
+        'linux': `${process.env.HOME}/.keepix`
+    },
+    analyticsFilePath: {
+        'win': `${process.env.APPDATA}\\.keepix\\analytics.json`,
+        'osx': `${process.env.HOME}/.keepix/analytics.json`,
+        'linux': `${process.env.HOME}/.keepix/analytics.json`
+    },
+    propertiesFilePath: {
+        'win': `${process.env.APPDATA}\\.keepix\\properties.json`,
+        'osx': `${process.env.HOME}/.keepix/properties.json`,
+        'linux': `${process.env.HOME}/.keepix/properties.json`
+    }
 };

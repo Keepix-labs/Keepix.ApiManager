@@ -26,7 +26,7 @@ export class FirstLoadService {
         if (fs.existsSync('/etc/systemd/system')) {
 
             // Setup the keepix service for restart the app at each boot system
-            await this.bashService.execWrapper(`cp ${__dirname}/../scripts/keepix-api.systemd.config /etc/systemd/system/keepix-api.service`);
+            await this.bashService.execWrapper(`cp ${__dirname}/../../scripts/keepix-api.systemd.config /etc/systemd/system/keepix-api.service`);
             await this.bashService.execWrapper(`systemctl enable keepix-api.service`);
             this.loggerService.log('keepix-api.service enabled');
 

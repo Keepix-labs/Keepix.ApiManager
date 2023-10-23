@@ -43,9 +43,9 @@ async function bootstrap() {
   app.enableCors(environment.corsConfig);
 
 
-  // Linux Storage Directory
-  if (fs.existsSync('/root') && !fs.existsSync('/root/.keepix')) {
-    fs.mkdirSync('/root/.keepix');
+  // create App Directory
+  if (!fs.existsSync(environment.appDirectory[environment.plateform])) {
+    fs.mkdirSync(environment.appDirectory[environment.plateform]);
   }
 
   // Load Properties at startUp
