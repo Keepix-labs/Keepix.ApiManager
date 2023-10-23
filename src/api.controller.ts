@@ -50,9 +50,9 @@ export class ApiController {
         return true;
     }
 
-    @Get('plateform-id')
+    @Get('platform-id')
     async plateformId() {
-        return environment.plateformId;
+        return environment.platformId;
     }
 
     @Get('keepix-information')

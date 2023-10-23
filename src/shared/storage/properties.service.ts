@@ -17,7 +17,7 @@ import { environment } from "src/environment";
  */
 @Injectable()
 export class PropertiesService extends PropertiesStorage {
-    protected readonly propertiesFilePath = environment.propertiesFilePath[environment.plateform];
+    protected readonly propertiesFilePath = environment.propertiesFilePath[environment.platform];
     protected propertiesMap: any = undefined;
 
     constructor(

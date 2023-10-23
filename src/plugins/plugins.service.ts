@@ -34,7 +34,7 @@ export class PluginsService {
                     ... plugin,
                     exec: async (argObject) => {
                         return await new Promise((resolve) => {
-                            exec(`./.plugins/${plugin.id}/dist/${environment.plateformId}/${plugin.id} '${JSON.stringify(argObject)}'`, (error, stdout, stderr) => {
+                            exec(`./.plugins/${plugin.id}/dist/${environment.platformId}/${plugin.id} '${JSON.stringify(argObject)}'`, (error, stdout, stderr) => {
                                 const result = JSON.parse(stdout);
     
                                 resolve({
@@ -90,7 +90,7 @@ export class PluginsService {
         }
         const Downloader = require("nodejs-file-downloader");
         const downloader = new Downloader({
-            url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/${environment.plateformId}.tar.gz`,
+            url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/${environment.platformId}.tar.gz`,
             directory: `.plugins/${plugin.id}`, //This folder will be created, if it doesn't exist.   
         });
         

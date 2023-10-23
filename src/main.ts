@@ -44,8 +44,8 @@ async function bootstrap() {
 
 
   // create App Directory
-  if (!fs.existsSync(environment.appDirectory[environment.plateform])) {
-    fs.mkdirSync(environment.appDirectory[environment.plateform]);
+  if (!fs.existsSync(environment.appDirectory[environment.platform])) {
+    fs.mkdirSync(environment.appDirectory[environment.platform]);
   }
 
   // Load Properties at startUp

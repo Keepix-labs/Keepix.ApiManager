@@ -20,9 +20,9 @@ export const environment = {
             ['Access-Control-Allow-Headers', 'Content-Type, Accept']
         ]
     },
-    plateform: process.platform.replace("darwin", "osx").replace("win32", "win"),
+    platform: process.platform.replace("darwin", "osx").replace("win32", "win"),
     arch: process.arch,
-    plateformId: `${process.platform.replace("darwin", "osx").replace("win32", "win")}-${process.arch}`,
+    platformId: `${process.platform.replace("darwin", "osx").replace("win32", "win")}-${process.arch}`,
     appDirectory: {
         'win': `${process.env.APPDATA}\\.keepix`,
         'osx': `${process.env.HOME}/.keepix`,
