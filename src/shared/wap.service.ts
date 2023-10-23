@@ -63,12 +63,12 @@ export class WapService {
                     this.stopLed();
                 }
                 // if hotspot is enabled stop it and reboot the keepix (fixing the potential shutdown's).
-                if ((await this.hotSpotIsActive())) {
-                    await this.stopHotSpot(); // force stop hotspot
-                    await this.bashService.execWrapper('reboot'); // reboot
-                    // stay running
-                    return ;
-                }
+                // if ((await this.hotSpotIsActive())) {
+                //     await this.stopHotSpot(); // force stop hotspot
+                //     await this.bashService.execWrapper('reboot'); // reboot
+                //     // stay running
+                //     return ;
+                // }
                 this.running = false;
                 return ;
             }
@@ -83,7 +83,7 @@ export class WapService {
             }
 
             if (hotSpotIsActive && ethernetIsAlive) {
-                await this.stopHotSpot();
+                //await this.stopHotSpot();
                 this.running = false;
                 return ;
             }
@@ -125,8 +125,8 @@ export class WapService {
             
             // No HotSpot
             if (!ethernetIsAlive && !hotSpotIsActive) {
-                const hostSpotIsRunning = await this.startHotSpot();
-                this.loggerService.log('HotSpot Started:', hostSpotIsRunning);
+                //const hostSpotIsRunning = await this.startHotSpot();
+                //this.loggerService.log('HotSpot Started:', hostSpotIsRunning);
             }
 
             // if no wifi radio set on the radio wifi
