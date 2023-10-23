@@ -73,20 +73,15 @@ export class ApiService {
                 console.log(fileTarGzPath, version, downloadStatus);
                 onDownloaded();
 
-                // remove src directory
-                fs.rmSync('./src', {
-                    recursive: true,
-                    force: true
-                });
                 // remove scripts directory
-                fs.rmSync('./scripts', {
+                fs.rmSync(`${environment.appDirectory}/release`, {
                     recursive: true,
                     force: true
                 });
     
                 const decompress = require('decompress');
                 const decompressTargz = require('decompress-targz');
-                await decompress(fileTarGzPath, `..`, {
+                await decompress(fileTarGzPath, `${environment.appDirectory}/release`, {
                     plugins: [
                         decompressTargz()
                     ]
@@ -109,8 +104,8 @@ export class ApiService {
     public async downloadApi(repositoryUrl, version, cb = async (filePath, version, downloadStatus) => {}) {
         const Downloader = require("nodejs-file-downloader");
         const downloader = new Downloader({
-            url: `${repositoryUrl}/releases/download/${version}/api.tar.gz`,
-            directory: `.`, //This folder will be created, if it doesn't exist.   
+            url: `${repositoryUrl}/releases/download/${version}/api.${version}.tar.gz`,
+            directory: environment.appDirectory, //This folder will be created, if it doesn't exist.   
         });
         
         try {

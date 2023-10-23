@@ -19,19 +19,21 @@ export class ApiController {
     }
 
     @Get()
+    @ApiOperation({ summary: 'Get keepix-name' })
     get() {
         return this.propertiesService.getProperty('keepix-name');
-    }
-
-    @Get('hello')
-    hello() {
-        return 'OK';
     }
 
     @Get('wifi/list')
     @ApiOperation({ summary: 'Get list of wifi ssid\'s.' })
     async wifiList() {
         return await this.wapService.getWifiList();
+    }
+
+    @Get('platform-id')
+    @ApiOperation({ summary: 'Get plateform id' })
+    async plateformId() {
+        return environment.platformId;
     }
 
     @ApiBody({ type: Object })
@@ -45,18 +47,13 @@ export class ApiController {
         return await this.wapService.connectToWifi(body.ssid, body.password);
     }
 
-    @Get('reset')
-    async reset() {
-        this.wapService.stopHotSpot().then(async () => {
-            await this.bashService.execWrapper('reboot'); // reboot
-        });
-        return true;
-    }
-
-    @Get('platform-id')
-    async plateformId() {
-        return environment.platformId;
-    }
+    // @Get('reset')
+    // async reset() {
+    //     this.wapService.stopHotSpot().then(async () => {
+    //         await this.bashService.execWrapper('reboot'); // reboot
+    //     });
+    //     return true;
+    // }
 
     @Get('keepix-information')
     async keepixInformation() {
@@ -72,31 +69,31 @@ export class ApiController {
     @Post('update')
     async update() {
         console.log(process.argv.join(' '), process.env);
-        // if (environment.ENV == 'dev') {
-        //     const description = 'Updates not allowed in dev.';
-        //     console.log(description);
-        //     return { success: false, description: description };
-        // }
-        // let latestVersion = await this.apiService.getLatestVersionOfApiGit();
-        // if (environment.appVersion == latestVersion) {
-        //     return { success: false, description: 'Already Up-to-date.' };
-        // }
-        // this.apiService.downloadAndUnTarApi(
-        //     environment.apiManagerRepositoryUrl,
-        //     latestVersion,
-        //     () => {
-        //         console.log('Downloaded');
-        //     },
-        //     () => {
-        //         console.log('Untared');
-        //     },
-        //     (version) => {
-        //         console.log('Done');
-        //     })
-        // .then(async () => {
-        //     console.log('Done, restart');
-        //     await this.bashService.execWrapper('pm2 restart API');
-        // });
+        if (environment.ENV == 'dev') {
+            const description = 'Updates not allowed in dev.';
+            console.log(description);
+            return { success: false, description: description };
+        }
+        let latestVersion = await this.apiService.getLatestVersionOfApiGit();
+        if (environment.appVersion == latestVersion) {
+            return { success: false, description: 'Already Up-to-date.' };
+        }
+        this.apiService.downloadAndUnTarApi(
+            environment.apiManagerRepositoryUrl,
+            latestVersion,
+            () => {
+                console.log('Downloaded');
+            },
+            () => {
+                console.log('Untared');
+            },
+            (version) => {
+                console.log('Done');
+            })
+        .then(async () => {
+            console.log('Done, restart');
+            await this.bashService.execWrapper('pm2 restart API');
+        });
         return { success: true, description: 'Installation Running.' };
     }
 }
