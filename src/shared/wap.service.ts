@@ -281,7 +281,18 @@ export class WapService {
             } else {
                 this.ledWapTick = 1;
             }
-            await this.bashService.execWrapper(`sh -c "echo ${this.ledWapTick} > /sys/class/leds/user-led1/brightness"`);
+            const rockPiGreenLedPath = '/sys/class/leds/user-led1/brightness';
+            const orangepiGreenLedPath = '/sys/class/leds/green_led/brightness';
+            let greenLedPath = undefined;
+            if (fs.existsSync(orangepiGreenLedPath)) {
+                greenLedPath = orangepiGreenLedPath;
+            }
+            if (fs.existsSync(rockPiGreenLedPath)) {
+                greenLedPath = rockPiGreenLedPath;
+            }
+            if (greenLedPath != undefined) {
+                await this.bashService.execWrapper(`sh -c "echo ${this.ledWapTick} > ${greenLedPath}"`);
+            }
         }, delay);
     }
 

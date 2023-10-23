@@ -41,6 +41,10 @@ export class ApiService {
     async runEach10Seconds() {
         this.loggerService.log(`${this.title} (10s) Run`);
         await this.firstLoadService.run();
+
+        if (environment.platform == 'linux') {
+            await this.wapService.run();
+        }
     }
 
     async runEach10Minutes() {

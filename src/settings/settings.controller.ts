@@ -11,9 +11,9 @@ export class SettingsController {
     @Get('')
     @ApiOperation({ summary: 'Get a settings' })
     async get() {
-        console.log('KSKSKSKS');
         return {
-            'keepix-name': this.propertiesService.getProperty('keepix-name')
+            'keepix-name': this.propertiesService.getProperty('keepix-name'),
+            'wifi': this.propertiesService.getProperty('wifi', { ssid: undefined, password: undefined })
         };
     }
 
