@@ -6,9 +6,10 @@ import { ApiService } from './api.service';
 import { ApiController } from './api.controller';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { SettingsModule } from './settings/settings.module';
+import { WalletsModule } from './wallets/wallets.module';
 
 @Module({
-  imports: [PluginsModule, MonitoringModule, SettingsModule, SharedModule],
+  imports: [PluginsModule, MonitoringModule, SettingsModule, SharedModule, WalletsModule],
   controllers: [ApiController],
   providers: [ApiService],
 })
