@@ -6,6 +6,7 @@ import * as DHCP from "dhcp";
 import * as hostapd from "wireless-tools/hostapd";
 import { BashService } from "./bash.service";
 import { LoggerService } from "./logger.service";
+import { environment } from "src/environment";
 
 @Injectable()
 export class WapService {
@@ -229,6 +230,9 @@ export class WapService {
     }
 
     async getWifiList() {
+        if (environment.platform != 'linux') {
+            return [];
+        }
         if ((await this.wifiIsActive()) == false) {
             await this.bashService.execWrapper('nmcli radio wifi on');
             await new Promise((resolve) => { setTimeout(() => { resolve(true) }, 1000); });

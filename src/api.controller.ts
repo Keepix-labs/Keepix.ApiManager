@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Type } from '@nestjs/common';
 import { WapService } from './shared/wap.service';
 import { BashService } from './shared/bash.service';
 import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -29,11 +29,14 @@ export class ApiController {
     }
 
     @Get('wifi/list')
+    @ApiOperation({ summary: 'Get list of wifi ssid\'s.' })
     async wifiList() {
         return await this.wapService.getWifiList();
     }
 
+    @ApiBody({ type: Object })
     @Post('wifi')
+    @ApiOperation({ summary: 'Connect Keepix to a wifi.' })
     async setWifi(@Body() body: { name: string, ssid: string, password: string }) {
         if (body.name != undefined) {
             this.propertiesService.setProperty('keepix-name', body.name);

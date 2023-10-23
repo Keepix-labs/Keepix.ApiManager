@@ -34,7 +34,7 @@ export class PluginsService {
                     ... plugin,
                     exec: async (argObject) => {
                         return await new Promise((resolve) => {
-                            exec(`./.plugins/${plugin.id}/dist/${environment.platformId}/${plugin.id} '${JSON.stringify(argObject)}'`, (error, stdout, stderr) => {
+                            exec(`${environment.appDirectory[environment.platform]}/plugins/${plugin.id}/dist/${environment.platformId}/${plugin.id} '${JSON.stringify(argObject)}'`, (error, stdout, stderr) => {
                                 const result = JSON.parse(stdout);
     
                                 resolve({
@@ -61,7 +61,7 @@ export class PluginsService {
     
                 const decompress = require('decompress');
                 const decompressTargz = require('decompress-targz');
-                await decompress(fileTarGzPath, `./.plugins/${plugin.id}`, {
+                await decompress(fileTarGzPath, `${environment.appDirectory[environment.platform]}/plugins/${plugin.id}`, {
                     plugins: [
                         decompressTargz()
                     ]
@@ -91,7 +91,7 @@ export class PluginsService {
         const Downloader = require("nodejs-file-downloader");
         const downloader = new Downloader({
             url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/${environment.platformId}.tar.gz`,
-            directory: `.plugins/${plugin.id}`, //This folder will be created, if it doesn't exist.   
+            directory: `${environment.appDirectory[environment.platform]}/plugins/${plugin.id}`, //This folder will be created, if it doesn't exist.   
         });
         
         try {
