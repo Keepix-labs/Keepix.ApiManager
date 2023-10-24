@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Type } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res, Type, StreamableFile } from '@nestjs/common';
 import { WapService } from './shared/wap.service';
 import { BashService } from './shared/bash.service';
 import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -6,9 +6,10 @@ import { environment } from './environment';
 import * as fs from 'fs';
 import { ApiService } from './api.service';
 import { PropertiesService } from './shared/storage/properties.service';
+import path from 'path';
 
 @ApiTags('App')
-@Controller('app')
+@Controller('')
 export class ApiController {
 
     constructor(
@@ -18,26 +19,32 @@ export class ApiController {
         private propertiesService: PropertiesService) {
     }
 
-    @Get()
+    @Get('/favicon.png')
+    favicon(): StreamableFile {
+        const file = fs.createReadStream(path.join(environment.appDirectory[environment.platform], 'assets/favicon.png'));
+        return new StreamableFile(file);
+    }
+
+    @Get('/app')
     @ApiOperation({ summary: 'Get keepix-name' })
     get() {
         return this.propertiesService.getProperty('keepix-name');
     }
 
-    @Get('wifi/list')
+    @Get('/app/wifi/list')
     @ApiOperation({ summary: 'Get list of wifi ssid\'s.' })
     async wifiList() {
         return await this.wapService.getWifiList();
     }
 
-    @Get('platform-id')
+    @Get('/app/platform-id')
     @ApiOperation({ summary: 'Get plateform id' })
     async plateformId() {
         return environment.platformId;
     }
 
     @ApiBody({ type: Object })
-    @Post('wifi')
+    @Post('/app/wifi')
     @ApiOperation({ summary: 'Connect Keepix to a wifi.' })
     async setWifi(@Body() body: { name: string, ssid: string, password: string }) {
         if (body.name != undefined) {
@@ -55,7 +62,7 @@ export class ApiController {
     //     return true;
     // }
 
-    @Get('keepix-information')
+    @Get('/app/keepix-information')
     async keepixInformation() {
         return {
             version: environment.appVersion,
@@ -66,7 +73,7 @@ export class ApiController {
     @ApiQuery({ name: 'version', type: 'string', required: true })
     @ApiBody({ type: Object })
     @ApiOperation({ summary: 'Install a new keepix api version.' })
-    @Post('update')
+    @Post('/app/update')
     async update() {
         console.log(process.argv.join(' '), process.env);
         if (environment.ENV == 'dev') {

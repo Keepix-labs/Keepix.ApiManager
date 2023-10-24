@@ -33,6 +33,7 @@
     "decompress-targz": "^4.1.1",
     "dhcp": "github:Keepix-labs/node-dhcp",
     "ethers": "^6.7.1",
+    "https": "^1.0.0",
     "moment": "^2.29.4",
     "node-fetch": "^3.3.2",
     "node-schedule": "^2.1.1",

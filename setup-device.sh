@@ -8,8 +8,12 @@ apt-get --yes install git ansible build-essential wireless-tools hostapd dnsmasq
 curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash 
 source ~/.bashrc
 nvm install v18.18.0
-git clone https://github.com/Keepix-labs/Keepix.ApiManager.git ~/Keepix.ApiManager
+# git clone https://github.com/Keepix-labs/Keepix.ApiManager.git ~/Keepix.ApiManager
 npm install -g pm2
-cd ~/Keepix.ApiManager
-npm install
+# cd ~/Keepix.ApiManager
+# npm install
+
+wget https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.3/api.tar.gz
+tar -xvf api.tar.gz /root/.keepix
+rm -rf api.tar.gz
 pm2 start pm2.config.js

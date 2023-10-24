@@ -6,7 +6,8 @@
     "deleteOutDir": true,
     "plugins": ["@nestjs/swagger"],
     "assets": [
-      { "include": "scripts", "outDir": "dist", "watchAssets": true }
+      { "include": "scripts", "outDir": "dist", "watchAssets": true },
+      { "include": "assets", "outDir": "dist", "watchAssets": true }
     ]
   }
 }

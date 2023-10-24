@@ -1,8 +1,13 @@
 import * as fs from 'fs';
 import { name, version } from '../package.json';
+import path from 'path';
+
+const env = path.join(__dirname, `../..`).endsWith('.keepix') ? 'prod' : 'dev';
+const platform = process.platform.replace("darwin", "osx").replace("win32", "win");
+const appDataPath = env == 'prod' ? path.join(platform == 'win' ? process.env.APPDATA : process.env.HOME, '.keepix') : path.join(__dirname, `..`);
 
 export const environment = {
-    ENV: fs.existsSync('./scripts') ? 'prod' : 'dev',
+    ENV: env,
     appTitle: name,
     appVersion: `v${version}`,
     appDescription: '',
@@ -20,22 +25,22 @@ export const environment = {
             ['Access-Control-Allow-Headers', 'Content-Type, Accept']
         ]
     },
-    platform: process.platform.replace("darwin", "osx").replace("win32", "win"),
+    platform: platform,
     arch: process.arch,
-    platformId: `${process.platform.replace("darwin", "osx").replace("win32", "win")}-${process.arch}`,
+    platformId: `${platform}-${process.arch}`,
     appDirectory: {
-        'win': `${process.env.APPDATA}\\.keepix`,
-        'osx': `${process.env.HOME}/.keepix`,
-        'linux': `${process.env.HOME}/.keepix`
+        'win': appDataPath,
+        'osx': appDataPath,
+        'linux': appDataPath
     },
     analyticsFilePath: {
-        'win': `${process.env.APPDATA}\\.keepix\\analytics.json`,
-        'osx': `${process.env.HOME}/.keepix/analytics.json`,
-        'linux': `${process.env.HOME}/.keepix/analytics.json`
+        'win': path.join(appDataPath, 'analytics.json'),
+        'osx': path.join(appDataPath, 'analytics.json'),
+        'linux': path.join(appDataPath, 'analytics.json')
     },
     propertiesFilePath: {
-        'win': `${process.env.APPDATA}\\.keepix\\properties.json`,
-        'osx': `${process.env.HOME}/.keepix/properties.json`,
-        'linux': `${process.env.HOME}/.keepix/properties.json`
+        'win': path.join(appDataPath, 'properties.json'),
+        'osx': path.join(appDataPath, 'properties.json'),
+        'linux': path.join(appDataPath, 'properties.json')
     }
 };
