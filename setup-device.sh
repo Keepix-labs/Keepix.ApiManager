@@ -14,6 +14,7 @@ npm install -g pm2
 # npm install
 
 wget https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.3/api.tar.gz
-tar -xvf api.tar.gz /root/.keepix
+mkdir /root/.keepix
+tar -xvf api.tar.gz -C /root/.keepix
 rm -rf api.tar.gz
 pm2 start pm2.config.js

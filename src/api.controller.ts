@@ -99,7 +99,10 @@ export class ApiController {
             })
         .then(async () => {
             console.log('Done, restart');
-            await this.bashService.execWrapper('pm2 restart API');
+            if (environment.platform == 'linux') {
+                await this.bashService.execWrapper(`npm install --prefix "${environment.appDirectory[environment.platform]}"`);
+                await this.bashService.execWrapper('pm2 restart API');
+            }
         });
         return { success: true, description: 'Installation Running.' };
     }

@@ -1,8 +1,8 @@
 module.exports = {
     apps: [{
       name: "Keepix",
-      script: "node",
-      args: '"/root/.keepix/release/run.js"',
+      script: "/root/.keepix/release/run.js",
+      args: '',
       interpreter : "node@18.18.0"
    }]
 }
