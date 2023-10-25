@@ -1,6 +1,7 @@
 #!/bin/bash
 
 if [[ $1 =~ ^v([\\d])* ]]; then
+    rm -rf "./release"
     cp -r "./dist" "./release"
     tar -czvf "./release/api.tar.gz" "./release"
     gh release create "$1" ./release/*.tar.gz

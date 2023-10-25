@@ -12,8 +12,15 @@ export const environment = {
     appVersion: `v${version}`,
     appDescription: '',
     appTag: name,
-    port: 9000,
+    httpPort: 2000,
+    httpsPort: 9000,
+    webAppHttpPort: 80,
+    webAppHttpsPort: 443,
     ip: '0.0.0.0',
+    security: {
+        certUrl: 'https://cert.keepix.org/cert.pem',
+        keyUrl: 'https://cert.keepix.org/privkey.pem'
+    },
     pluginListUrl: 'https://github.com/Keepix-labs/Keepix.Plugins/raw/main/list.json',
     apiManagerRepositoryUrl: 'https://github.com/Keepix-labs/Keepix.ApiManager',
     corsConfig: {

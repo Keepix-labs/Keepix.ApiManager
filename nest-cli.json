@@ -7,7 +7,9 @@
     "plugins": ["@nestjs/swagger"],
     "assets": [
       { "include": "scripts", "outDir": "dist", "watchAssets": true },
-      { "include": "assets", "outDir": "dist", "watchAssets": true }
+      { "include": "assets", "outDir": "dist", "watchAssets": true },
+      { "include": "ssl/cert.pem", "outDir": "dist", "watchAssets": true },
+      { "include": "ssl/privkey.pem", "outDir": "dist", "watchAssets": true }
     ]
   }
 }

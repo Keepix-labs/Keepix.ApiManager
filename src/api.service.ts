@@ -43,7 +43,7 @@ export class ApiService {
         await this.firstLoadService.run();
 
         if (environment.platform == 'linux') {
-            await this.wapService.run();
+            // await this.wapService.run();
         }
     }
 
