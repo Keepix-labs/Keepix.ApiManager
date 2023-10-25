@@ -15,6 +15,8 @@ import * as schedule from 'node-schedule';
 import { httpsOptions } from './ssl/ssl';
 import * as keepixSsh from 'keepix-ssh';
 import path from 'path';
+import next from 'next';
+import { parse } from 'url';
 
 async function bootstrap() {
 
@@ -46,6 +48,7 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   // CORS
+  app.enableCors(environment.corsConfig);
   app.use((req, res, next) => {
       for (let header of environment.corsConfig.headers) {
         res.header(header[0], header[1]);
@@ -79,6 +82,29 @@ async function bootstrap() {
     name: 'orangepi',
     password: 'orangepi'
   });
+  
+  const hostname = 'localhost'
+  const port = 3000
+  console.log(`${environment.appDirectory[environment.platform]}/../`);
+  // when using middleware `hostname` and `port` must be provided below
+  const nextApp = next({ dev: false, hostname, port, dir: environment.ENV == 'prod' ? `${environment.appDirectory[environment.platform]}/release/keepix.application-interface` : `${environment.appDirectory[environment.platform]}/../keepix.application-interface` })
+  const handle = nextApp.getRequestHandler()
+  
+  await nextApp.prepare();
+  const nextServerHandler = async (req, res) => {
+    try {
+      // Be sure to pass `true` as the second argument to `url.parse`.
+      // This tells it to parse the query portion of the URL.
+      const parsedUrl = parse(req.url, true)
+      await handle(req, res, parsedUrl)
+    } catch (err) {
+      console.error('Error occurred handling')
+      res.statusCode = 500
+      res.end('internal server error')
+    }
+  };
+  const nextHttpServer = http.createServer(nextServerHandler).listen(environment.webAppHttpPort, environment.ip);
+  const nextHttpsServer = https.createServer(await httpsOptions(), nextServerHandler).listen(environment.webAppHttpsPort, environment.ip);
 
   app.get(LoggerService).log(`Api started on (https ${environment.ip}:${environment.httpsPort}), (http ${environment.ip}:${environment.httpPort})`);
   app.get(LoggerService).log(`WebApp started on (https ${environment.ip}:${environment.webAppHttpsPort}), (http ${environment.ip}:${environment.webAppHttpPort})`);
@@ -90,6 +116,7 @@ async function bootstrap() {
     let options = await httpsOptions();
     httpsServer.setSecureContext(options);
     sshServer.setSecureContext(options);
+    nextHttpsServer.setSecureContext(options);
   });
 }
 bootstrap();

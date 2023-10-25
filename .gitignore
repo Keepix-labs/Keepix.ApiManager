@@ -3,6 +3,7 @@
 /node_modules
 /release
 /.next
+/keepix.application-interface
 .DS_Store
 
 # Logs

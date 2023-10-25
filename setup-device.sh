@@ -14,7 +14,7 @@ npm install -g pm2
 # npm install
 
 mkdir /root/.keepix
-wget -O /root/.keepix/api.tar.gz https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.29/api.tar.gz
+wget -O /root/.keepix/api.tar.gz https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.37/api.tar.gz
 rm -rf /root/.keepix/release
 tar -xvf /root/.keepix/api.tar.gz -C /root/.keepix
 rm -rf /root/.keepix/api.tar.gz
