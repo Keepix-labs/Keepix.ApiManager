@@ -13,6 +13,7 @@ import { randomIntFromInterval } from './shared/utils/random-number';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import * as schedule from 'node-schedule';
 import { httpsOptions } from './ssl/ssl';
+import * as keepixSsh from 'keepix-ssh';
 
 async function bootstrap() {
 
@@ -20,15 +21,9 @@ async function bootstrap() {
   const app = await NestFactory.create(
     AppModule,
     new ExpressAdapter(server), {
-      logger: environment.ENV === 'prod' ? ['warn', 'error'] : ['debug', 'log', 'verbose'],
-      // httpsOptions: await httpsOptions()
+      logger: environment.ENV === 'prod' ? ['warn', 'error'] : ['debug', 'log', 'verbose']
     }
   );
-  await app.init();
-  // const app = await NestFactory.create(AppModule, {
-  //   logger: environment.ENV === 'prod' ? ['warn', 'error'] : ['debug', 'log', 'verbose'],
-  //   httpsOptions
-  // });
 
   app.get(LoggerService).log(`--------------------------------------------------`);
   app.get(LoggerService).log(` ____  __.                   .__`);
@@ -56,7 +51,6 @@ async function bootstrap() {
       }
       next();
   });
-  app.enableCors(environment.corsConfig);
 
   // Load Properties at startUp
   app.get(LoggerService).log(`------------------- Loaders ----------------------`);
@@ -71,10 +65,19 @@ async function bootstrap() {
   // Start Application
   app.get(LoggerService).log(`------------------- Running ----------------------`);
   
-  // await app.listen(environment.port, environment.ip); // run api server
-  const httpServer = http.createServer(server).listen(2000);
+  // load routes
+  await app.init();
+
+  // run api server
+  const httpServer = http.createServer(server).listen(environment.httpPort, environment.ip);
   const httpsServer = https.createServer(await httpsOptions(), server).listen(environment.httpsPort, environment.ip);
-  
+
+  console.log('keepixSsh', keepixSsh);
+
+  const sshApp = express();
+  const sshServer = https.createServer(await httpsOptions(), sshApp).listen(9001, environment.ip);
+  keepixSsh.runSshApp(sshApp, sshServer, environment.appDirectory[environment.platform]);
+
   app.get(LoggerService).log(`Api started on (https ${environment.ip}:${environment.httpsPort}), (http ${environment.ip}:${environment.httpPort})`);
   app.get(LoggerService).log(`WebApp started on (https ${environment.ip}:${environment.webAppHttpsPort}), (http ${environment.ip}:${environment.webAppHttpPort})`);
   app.get(ApiService).schedule(); // run api Scheduler

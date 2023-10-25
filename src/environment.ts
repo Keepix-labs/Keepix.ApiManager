@@ -28,7 +28,7 @@ export const environment = {
         origin: "*",
         headers: [
             ['Access-Control-Allow-Origin', '*'],
-            ['Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE'],
+            ['Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTION'],
             ['Access-Control-Allow-Headers', 'Content-Type, Accept']
         ]
     },

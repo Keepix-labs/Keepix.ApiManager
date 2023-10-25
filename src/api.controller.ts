@@ -21,7 +21,7 @@ export class ApiController {
 
     @Get('/favicon.png')
     favicon(): StreamableFile {
-        const file = fs.createReadStream(path.join(environment.appDirectory[environment.platform], 'assets/favicon.png'));
+        const file = fs.createReadStream(path.join(environment.appDirectory[environment.platform], 'public/favicon.png'));
         return new StreamableFile(file);
     }
 
