@@ -13,10 +13,13 @@ npm install -g pm2
 # cd ~/Keepix.ApiManager
 # npm install
 
-wget -O /root/.keepix/api.tar.gz https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.9/api.tar.gz
 mkdir /root/.keepix
+wget -O /root/.keepix/api.tar.gz https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.29/api.tar.gz
 rm -rf /root/.keepix/release
 tar -xvf /root/.keepix/api.tar.gz -C /root/.keepix
 rm -rf /root/.keepix/api.tar.gz
-npm install --prefix /root/.keepix/release
+cp -r /root/.keepix/release/ssl /root/.keepix/ssl
+cp /root/.keepix/release/package.json /root/.keepix/package.json
+cp /root/.keepix/release/run.js /root/.keepix/run.js
+npm install --prefix /root/.keepix
 pm2 restart /root/.keepix/release/pm2.config.js

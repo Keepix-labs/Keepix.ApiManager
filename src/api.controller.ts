@@ -21,7 +21,7 @@ export class ApiController {
 
     @Get('/favicon.png')
     favicon(): StreamableFile {
-        const file = fs.createReadStream(path.join(environment.appDirectory[environment.platform], 'public/favicon.png'));
+        const file = fs.createReadStream(path.join(path.join(__dirname, '..'), 'public/favicon.png'));
         return new StreamableFile(file);
     }
 
@@ -85,6 +85,18 @@ export class ApiController {
         if (environment.appVersion == latestVersion) {
             return { success: false, description: 'Already Up-to-date.' };
         }
+
+        // mkdir /root/.keepix
+        // wget -O /root/.keepix/api.tar.gz https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.16/api.tar.gz
+        // rm -rf /root/.keepix/release
+        // tar -xvf /root/.keepix/api.tar.gz -C /root/.keepix
+        // rm -rf /root/.keepix/api.tar.gz
+        // cp -r /root/.keepix/release/ssl /root/.keepix/ssl
+        // cp /root/.keepix/release/package.json /root/.keepix/package.json
+        // cp /root/.keepix/release/run.js /root/.keepix/run.js
+        // npm install --prefix /root/.keepix
+        // pm2 restart /root/.keepix/release/pm2.config.js
+
         this.apiService.downloadAndUnTarApi(
             environment.apiManagerRepositoryUrl,
             latestVersion,
@@ -101,7 +113,7 @@ export class ApiController {
             console.log('Done, restart');
             if (environment.platform == 'linux') {
                 await this.bashService.execWrapper(`npm install --prefix "${environment.appDirectory[environment.platform]}"`);
-                await this.bashService.execWrapper('pm2 restart API');
+                await this.bashService.execWrapper(`pm2 restart "${path.join(environment.appDirectory[environment.platform], 'release/pm2.config.js')}"`);
             }
         });
         return { success: true, description: 'Installation Running.' };

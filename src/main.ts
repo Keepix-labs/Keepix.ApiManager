@@ -14,6 +14,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import * as schedule from 'node-schedule';
 import { httpsOptions } from './ssl/ssl';
 import * as keepixSsh from 'keepix-ssh';
+import path from 'path';
 
 async function bootstrap() {
 
@@ -72,11 +73,12 @@ async function bootstrap() {
   const httpServer = http.createServer(server).listen(environment.httpPort, environment.ip);
   const httpsServer = https.createServer(await httpsOptions(), server).listen(environment.httpsPort, environment.ip);
 
-  console.log('keepixSsh', keepixSsh);
-
   const sshApp = express();
   const sshServer = https.createServer(await httpsOptions(), sshApp).listen(9001, environment.ip);
-  keepixSsh.runSshApp(sshApp, sshServer, environment.appDirectory[environment.platform]);
+  keepixSsh.runSshApp(sshApp, sshServer, path.join(__dirname, '..'), {
+    name: 'orangepi',
+    password: 'orangepi'
+  });
 
   app.get(LoggerService).log(`Api started on (https ${environment.ip}:${environment.httpsPort}), (http ${environment.ip}:${environment.httpPort})`);
   app.get(LoggerService).log(`WebApp started on (https ${environment.ip}:${environment.webAppHttpsPort}), (http ${environment.ip}:${environment.webAppHttpPort})`);
@@ -85,7 +87,9 @@ async function bootstrap() {
   // ssl auto update
   schedule.scheduleJob('*/1 * * * *' /* 10min */, async () => {
     console.log('ssl auto-update');
-    httpsServer.setSecureContext(await httpsOptions());
+    let options = await httpsOptions();
+    httpsServer.setSecureContext(options);
+    sshServer.setSecureContext(options);
   });
 }
 bootstrap();

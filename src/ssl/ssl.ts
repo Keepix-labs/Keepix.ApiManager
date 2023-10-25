@@ -7,10 +7,17 @@ export const httpsOptions = async () => {
     const keyPath = path.join(sslDirPath, 'privkey.pem');
     const certPath = path.join(sslDirPath, 'cert.pem');
 
+    const keyPathOld = path.join(sslDirPath, 'privkey_old.pem');
+    const certPathOld = path.join(sslDirPath, 'cert_old.pem');
+
     const defaultCerts = {
       key: fs.readFileSync(keyPath),
       cert: fs.readFileSync(certPath),
     };
+
+    fs.renameSync(keyPath, keyPathOld);
+    fs.renameSync(certPath, certPathOld);
+
     const Downloader = require("nodejs-file-downloader");
     const downloaderKey = new Downloader({
         url: environment.security.keyUrl,
@@ -24,11 +31,17 @@ export const httpsOptions = async () => {
     try {
         await downloaderKey.download();
         await downloaderCert.download();
+
+        fs.rmSync(keyPathOld);
+        fs.rmSync(certPathOld);
+
         return {
             key: fs.readFileSync(keyPath),
             cert: fs.readFileSync(certPath),
         };
     } catch (error) {
+        fs.renameSync(keyPathOld, keyPath);
+        fs.renameSync(certPathOld, certPath);
         console.log("Download failed", error);
         return defaultCerts;
     }

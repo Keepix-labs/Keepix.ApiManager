@@ -16,6 +16,8 @@ export const environment = {
     httpsPort: 9000,
     webAppHttpPort: 80,
     webAppHttpsPort: 443,
+    autoUpdateApp: false,
+    autoUpdateInstalledPlugins: false,
     ip: '0.0.0.0',
     security: {
         certUrl: 'https://cert.keepix.org/cert.pem',

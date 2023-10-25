@@ -10,6 +10,7 @@ import { FirstLoadService } from './shared/first-load.service';
 import { LoggerService } from './shared/logger.service';
 import { PluginsService } from './plugins/plugins.service';
 import { environment } from './environment';
+import path from 'path';
 
 @Injectable()
 export class ApiService {
@@ -19,6 +20,7 @@ export class ApiService {
     constructor(
         private loggerService: LoggerService,
         private wapService: WapService,
+        private bashService: BashService,
         private firstLoadService: FirstLoadService,
         private pluginsService: PluginsService) {
     }
@@ -69,19 +71,21 @@ export class ApiService {
         onUnTar = () => {},
         onInstalled = (version) => {}) {
         return await new Promise(async (resolve) => {
+
+            const releasePath = path.join(environment.appDirectory[environment.platform], 'release');
+            const appDirectory = environment.appDirectory[environment.platform];
+
+            if (fs.existsSync(releasePath)) {
+                fs.renameSync(releasePath, path.join(environment.appDirectory[environment.platform], 'release_old'));
+            }
+
             await this.downloadApi(repositoryUrl, version, async (fileTarGzPath, version, downloadStatus) => {
                 console.log(fileTarGzPath, version, downloadStatus);
                 onDownloaded();
-
-                // remove scripts directory
-                fs.rmSync(`${environment.appDirectory}/release`, {
-                    recursive: true,
-                    force: true
-                });
     
                 const decompress = require('decompress');
                 const decompressTargz = require('decompress-targz');
-                await decompress(fileTarGzPath, `${environment.appDirectory}/release`, {
+                await decompress(fileTarGzPath, appDirectory, {
                     plugins: [
                         decompressTargz()
                     ]
@@ -94,6 +98,25 @@ export class ApiService {
                     recursive: true,
                     force: true
                 });
+
+                // have a new dir or file
+                const mvANewFileOrDir = (filenameOrDirname) => {
+                    if (fs.existsSync(path.join(releasePath, filenameOrDirname))) {
+                        if (fs.existsSync(path.join(appDirectory, filenameOrDirname))) {
+                            fs.rmSync(path.join(appDirectory, filenameOrDirname), {
+                                recursive: true,
+                                force: true
+                            });
+                        }
+                        fs.renameSync(
+                            path.join(releasePath, filenameOrDirname),
+                            path.join(appDirectory, filenameOrDirname)
+                        );
+                    }
+                }
+
+                mvANewFileOrDir('ssl');
+                mvANewFileOrDir('run.js');
                 
                 onInstalled(version);
                 resolve(true);
@@ -102,10 +125,16 @@ export class ApiService {
     }
 
     public async downloadApi(repositoryUrl, version, cb = async (filePath, version, downloadStatus) => {}) {
+        const tarGzPath = path.join(environment.appDirectory[environment.platform], 'api.tar.gz');
+        if (fs.existsSync(tarGzPath)) {
+            fs.rmSync(tarGzPath);
+        }
+
         const Downloader = require("nodejs-file-downloader");
         const downloader = new Downloader({
-            url: `${repositoryUrl}/releases/download/${version}/api.${version}.tar.gz`,
-            directory: environment.appDirectory, //This folder will be created, if it doesn't exist.   
+            // github url of the release tar.gz
+            url: `${repositoryUrl}/releases/download/${version}/api.tar.gz`,
+            directory: environment.appDirectory[environment.platform], //This folder will be created, if it doesn't exist.   
         });
         
         try {
