@@ -42,7 +42,6 @@ async function bootstrap() {
     .setTitle(environment.appTitle)
     .setDescription(environment.appDescription)
     .setVersion(environment.appVersion)
-    // .addTag(environment.appTag)
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
@@ -55,6 +54,11 @@ async function bootstrap() {
       }
       next();
   });
+
+  // plateform .keepix creation of the directory
+  if (!fs.existsSync(environment.appDirectory[environment.platform])) {
+    fs.mkdirSync(environment.appDirectory[environment.platform]);
+  }
 
   // Load Properties at startUp
   app.get(LoggerService).log(`------------------- Loaders ----------------------`);
@@ -116,7 +120,7 @@ async function bootstrap() {
 
   // ssl auto update
   schedule.scheduleJob('*/1 * * * *' /* 10min */, async () => {
-    console.log('ssl auto-update');
+    app.get(LoggerService).log('ssl auto-update');
     let options = await httpsOptions();
     httpsServer.setSecureContext(options);
     sshServer.setSecureContext(options);

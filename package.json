@@ -1,6 +1,6 @@
 {
     "name": "keepix.server",
-    "version": "0.0.91",
+    "version": "0.0.94",
     "description": "",
     "author": "",
     "private": true,
@@ -12,7 +12,7 @@
         "increase-build-version": "increase-build-package-public-directory && increase-build-package-public-directory bin",
         "build": "npm run install-latest-front && nest build && npm run increase-build-version && npm run copy-bin && npm run copy-package",
         "publish": "cd dist && npm publish",
-        "start": "nest start",
+        "start": "nest start -- --disable-front",
         "start:dev": "nest start --watch",
         "start:debug": "nest start --debug --watch",
         "start:prod": "node dist/main"

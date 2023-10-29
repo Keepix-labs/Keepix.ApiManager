@@ -1,6 +1,6 @@
 {
     "name": "keepix-server-build",
-    "version": "0.0.91",
+    "version": "0.0.94",
     "description": "simple CLI for manage keepix repositories",
     "main": "run.js",
     "bin": {

@@ -144,6 +144,56 @@ export class PluginsController {
     }
 
     @ApiParam({ name: 'pluginId', type: 'string' })
+    @ApiBody({ type: Object })
+    @ApiOperation({ summary: 'Uninstall pluginId.' })
+    @Post(':pluginId/uninstall')
+    async uninstallPlugin(
+        @Param('pluginId') pluginId,
+        @Body() body: any) {
+        const taskId = `${pluginId}-uninstall`;
+
+        if (this.runningTasks[taskId] != undefined && this.runningTasks[taskId].status == 'UNINSTALLING') {
+            return { error: 'Uninstallation Already In progress.' };
+        }
+
+        let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
+
+        if (plugin == undefined) {
+            return { error: 'pluginId not found.' };
+        }
+
+        this.runningTasks[taskId] = {
+            status: 'UNINSTALLING',
+            description: 'Uninstalling'
+        };
+
+        this.runCommandToPlugin(pluginId, {
+            key: 'uninstall',
+            ... body
+        }).then((resultOfExec) => {
+            if (resultOfExec.result == true) {
+                let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
+                plugin.ready = false;
+                delete plugin.version;
+                plugin.installed = false;
+                
+                this.propertiesService.save();
+                this.runningTasks[taskId] = {
+                    status: 'FINISHED',
+                    description: 'Uninstalled with Success.'
+                };
+            } else {
+                this.runningTasks[taskId] = {
+                    status: 'Error',
+                    description: resultOfExec.stdOut
+                };
+            }
+        });
+
+        return { taskId: taskId };
+    }
+
+    @ApiParam({ name: 'pluginId', type: 'string' })
     @ApiQuery({ name: 'version', type: 'string', required: true })
     @ApiBody({ type: Object })
     @ApiOperation({ summary: 'Install a new pluginId version.' })
