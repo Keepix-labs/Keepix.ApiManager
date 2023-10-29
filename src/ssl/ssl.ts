@@ -10,9 +10,12 @@ export const httpsOptions = async () => {
     const keyPathOld = path.join(sslDirPath, 'privkey_old.pem');
     const certPathOld = path.join(sslDirPath, 'cert_old.pem');
 
-    if (!fs.existsSync(keyPath) && fs.existsSync(keyPathOld) && fs.existsSync(certPathOld)) {
+    if ((!fs.existsSync(keyPath) || !fs.existsSync(certPath)) && fs.existsSync(keyPathOld) && fs.existsSync(certPathOld)) {
         if (fs.existsSync(certPath)) {
             fs.rmSync(certPath);
+        }
+        if (fs.existsSync(keyPath)) {
+            fs.rmSync(keyPath);
         }
         fs.renameSync(keyPathOld, keyPath);
         fs.renameSync(certPathOld, certPath);

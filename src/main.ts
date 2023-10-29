@@ -55,6 +55,19 @@ async function bootstrap() {
       next();
   });
 
+  app.use((req, res, next) => {
+    // if (req.url.startWith('/plugins/'))
+    // if (req.url.split('?')[0] == '/') {
+    //   req.url = '/index.html';
+    // }
+    // const urlObj = url.parse( req.url, true, false );
+
+    // if (!fs.existsSync(path.join(fronStaticDirectory, urlObj.pathname))) {
+    //   req.url = '/index.html';
+    // }
+    next();
+  });
+
   // plateform .keepix creation of the directory
   if (!fs.existsSync(environment.appDirectory[environment.platform])) {
     fs.mkdirSync(environment.appDirectory[environment.platform]);

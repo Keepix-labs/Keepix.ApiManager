@@ -34,7 +34,8 @@ export class PluginsService {
                     ... plugin,
                     exec: async (argObject) => {
                         return await new Promise((resolve) => {
-                            exec(`${environment.appDirectory[environment.platform]}/plugins/${plugin.id}/dist/${environment.platformId}/${plugin.id} '${JSON.stringify(argObject)}'`, (error, stdout, stderr) => {
+                            // double stringify for escapes double quotes
+                            exec(`${environment.appDirectory[environment.platform]}/plugins/${plugin.id}/dist/${environment.platformId}/${plugin.id} ${JSON.stringify(JSON.stringify(argObject))}`, (error, stdout, stderr) => {
                                 const result = JSON.parse(stdout);
     
                                 resolve({
