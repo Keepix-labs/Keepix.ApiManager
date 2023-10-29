@@ -8,8 +8,8 @@
     "assets": [
       { "include": "scripts", "outDir": "dist", "watchAssets": true },
       { "include": "public", "outDir": "dist", "watchAssets": true },
-      { "include": "ssl/cert.pem", "outDir": "dist", "watchAssets": true },
-      { "include": "ssl/privkey.pem", "outDir": "dist", "watchAssets": true }
+      { "include": "ssl/cert.pem", "outDir": "dist/src", "watchAssets": true },
+      { "include": "ssl/privkey.pem", "outDir": "dist/src", "watchAssets": true }
     ]
   }
 }

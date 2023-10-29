@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import { environment } from "src/environment";
 
 export const httpsOptions = async () => {
-    const sslDirPath = path.join(environment.appDirectory[environment.platform], 'ssl');
+    const sslDirPath = __dirname;
     const keyPath = path.join(sslDirPath, 'privkey.pem');
     const certPath = path.join(sslDirPath, 'cert.pem');
 

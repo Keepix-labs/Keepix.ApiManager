@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Res, Type, StreamableFile } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res, Type, StreamableFile, Query } from '@nestjs/common';
 import { WapService } from './shared/wap.service';
 import { BashService } from './shared/bash.service';
 import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import { ApiService } from './api.service';
 import { PropertiesService } from './shared/storage/properties.service';
 import path from 'path';
+import { spawn } from 'child_process';
 
 @ApiTags('App')
 @Controller('')
@@ -66,7 +67,7 @@ export class ApiController {
     async keepixInformation() {
         return {
             version: environment.appVersion,
-            latestVersion: await this.apiService.getLatestVersionOfApiGit()
+            latestVersion: await this.apiService.getLatestVersionOfApi()
         }
     }
 
@@ -74,48 +75,23 @@ export class ApiController {
     @ApiBody({ type: Object })
     @ApiOperation({ summary: 'Install a new keepix api version.' })
     @Post('/app/update')
-    async update() {
-        console.log(process.argv.join(' '), process.env);
+    async update(@Query('version') version: string = "latest") {
         if (environment.ENV == 'dev') {
             const description = 'Updates not allowed in dev.';
             console.log(description);
             return { success: false, description: description };
         }
-        let latestVersion = await this.apiService.getLatestVersionOfApiGit();
-        if (environment.appVersion == latestVersion) {
-            return { success: false, description: 'Already Up-to-date.' };
-        }
+        // let latestVersion = await this.apiService.getLatestVersionOfApi();
+        // if (environment.appVersion == latestVersion) {
+        //     return { success: false, description: 'Already Up-to-date.' };
+        // }
 
-        // mkdir /root/.keepix
-        // wget -O /root/.keepix/api.tar.gz https://github.com/Keepix-labs/Keepix.ApiManager/releases/download/v0.0.16/api.tar.gz
-        // rm -rf /root/.keepix/release
-        // tar -xvf /root/.keepix/api.tar.gz -C /root/.keepix
-        // rm -rf /root/.keepix/api.tar.gz
-        // cp -r /root/.keepix/release/ssl /root/.keepix/ssl
-        // cp /root/.keepix/release/package.json /root/.keepix/package.json
-        // cp /root/.keepix/release/run.js /root/.keepix/run.js
-        // npm install --prefix /root/.keepix
-        // pm2 restart /root/.keepix/release/pm2.config.js
+        fs.writeFileSync(path.join(environment.appDirectory[environment.platform], 'update'), version);
 
-        this.apiService.downloadAndUnTarApi(
-            environment.apiManagerRepositoryUrl,
-            latestVersion,
-            () => {
-                console.log('Downloaded');
-            },
-            () => {
-                console.log('Untared');
-            },
-            (version) => {
-                console.log('Done');
-            })
-        .then(async () => {
-            console.log('Done, restart');
-            if (environment.platform == 'linux') {
-                await this.bashService.execWrapper(`npm install --prefix "${environment.appDirectory[environment.platform]}"`);
-                await this.bashService.execWrapper(`pm2 restart "${path.join(environment.appDirectory[environment.platform], 'release/pm2.config.js')}"`);
-            }
+        this.bashService.execWrapper(`pm2 restart Keepix`).then(() => {
+            console.log('Update launched.');
         });
+
         return { success: true, description: 'Installation Running.' };
     }
 }

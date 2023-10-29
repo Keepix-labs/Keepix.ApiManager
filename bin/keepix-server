@@ -1,0 +1,149 @@
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
+
+const keepixBuildPackageName = 'keepix-server-build';
+const currentDir = __dirname;
+const npmNodeModulesGlobalDir = path.join(currentDir, '../..');
+const npmBinGlobalDir = path.join(currentDir, '../../../../bin');
+const keepixProgramDir = path.join(npmNodeModulesGlobalDir, keepixBuildPackageName);
+const saveOfKeepixDir = path.join(npmNodeModulesGlobalDir, `.-save-${keepixBuildPackageName}`);
+const platform = process.platform.replace("darwin", "osx").replace("win32", "win");
+const appDataPath = path.join(platform == 'win' ? process.env.APPDATA : process.env.HOME, '.keepix');
+
+const rollbackFn = () => {
+    if (fs.existsSync(keepixProgramDir)) { // garder le dossier de coter.
+        fs.rmSync(keepixProgramDir, {
+            recursive: true,
+            force: true
+        });
+    }
+    if (fs.existsSync(saveOfKeepixDir)) { // garder le dossier de coter.
+        fs.renameSync(saveOfKeepixDir, keepixProgramDir);
+    }
+};
+
+const executeCommandFn = async (cmd) => {
+    return await new Promise((resolve, reject) => {
+        exec(
+            cmd,
+            (error, stdout, stderr) => {
+                if (error) {
+                    resolve({ success: false, stdout: stdout, error: error });
+                    fs.appendFileSync(path.join(appDataPath, 'error.json'), `[[Error]]: ${cmd} -> ${error},${stdout}\n`);
+                    return ;
+                }
+                resolve({ success: true, stdout: stdout });
+            });
+    });
+};
+
+const restartPm2Fn = async () => {
+    return await executeCommandFn(`${path.join(npmBinGlobalDir, 'pm2')} restart ${path.join(keepixProgramDir, 'pm2.config.js')}`);
+};
+
+const getPidPm2Fn = async () => {
+    const result = await executeCommandFn(`${path.join(npmBinGlobalDir, 'pm2')} pid Keepix`);
+    return !isNaN(result.stdout) && Number(result.stdout) != 0;
+};
+
+const savePm2Fn = async () => {
+    return await executeCommandFn(`${path.join(npmBinGlobalDir, 'pm2')} save`);
+};
+
+const installFn = async (version) => {
+    return await executeCommandFn(`${path.join(npmBinGlobalDir, 'npm')} install -g ${keepixBuildPackageName}@${version}`);
+};
+
+const chmod777Binary = async () => {
+    return await executeCommandFn(`chmod 777 "${path.join(keepixProgramDir, 'bin/keepix-server')}"`);
+};
+
+const appRunningCheck = async () => {
+    return await new Promise(async (resolve) => {
+        for (let counterOfRetry = 0; counterOfRetry < 5; counterOfRetry++) {
+            if ((await getPidPm2Fn()) && (await getKeepixApiResponse())) {
+                console.log('Done http api Ok.');
+                resolve(true);
+                break ;
+            }
+            console.log('check http api is online...');
+            await new Promise((r) => { setTimeout(r, 20 * 1000); });
+        }
+        resolve(false);
+    });
+}
+
+const getKeepixApiResponse = async () => {
+    try {
+        const fetchResult = await fetch('http://127.0.0.1:2000/app');
+        return [200, 201, 304].includes(fetchResult.status);
+    } catch (e) { }
+    return false;
+}
+
+(async () => {
+    
+    if (process.argv[2] == 'version') {
+        console.log(`keepix-server version ${require('../package.json').version}`);
+        return ;
+    }
+
+    if (fs.existsSync(path.join(appDataPath, 'update'))) { // update application enabled
+        let versionAsked = process.argv[3] ?? 'latest';
+
+        if (fs.existsSync(path.join(appDataPath, 'update'))) { // remove update file declencher
+            fs.rmSync(path.join(appDataPath, 'update'));
+            console.log('file update removed.');
+        }
+        if (fs.existsSync(saveOfKeepixDir)) { // remove last save
+            fs.rmSync(saveOfKeepixDir, { recursive: true, force: true });
+            console.log('last rollback version removed.');
+        }
+        if (fs.existsSync(keepixProgramDir)) { // keep current version.
+            fs.renameSync(keepixProgramDir, saveOfKeepixDir);
+            console.log('saving a new rollback version.');
+        }
+        // npm install -g
+        if ((await installFn(versionAsked)).success === false) {
+            console.log('npm install failed.');
+            rollbackFn();
+            await restartPm2Fn();
+            return ;
+        } else {
+            if ((await chmod777Binary()).success === false) {
+                console.log('chmod 777 bin failed.');
+            } else {
+                console.log('chmod 777 bin success.');
+            }
+            console.log('npm install success.');
+        }
+    }
+    
+    if (process.argv[2] == 'pm2') {
+        if ((await restartPm2Fn()).success === false) {
+            console.log('pm2 restart failed.');
+            rollbackFn();
+            await restartPm2Fn();
+            return ;
+        }
+        console.log('pm2 restart success.');
+        if ((await savePm2Fn()).success === false) { // optionnal
+            console.log('pm2 save failed.');
+        } else {
+            console.log('pm2 save success.');
+        }
+        if ((await appRunningCheck()) === false) {
+            console.log('check app running failed.');
+            rollbackFn();
+            await restartPm2Fn();
+            return ;
+        }
+        console.log('pm2 restart/save success.');
+        return ;
+    }
+
+    // run process
+    const main = require('../run');
+})();

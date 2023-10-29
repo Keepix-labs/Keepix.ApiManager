@@ -2,8 +2,6 @@ import { Injectable } from "@nestjs/common";
 import moment from "moment";
 import * as fs from 'fs';
 import { AnsibleService } from "./ansible.service";
-import * as DHCP from "dhcp";
-import * as hostapd from "wireless-tools/hostapd";
 import { BashService } from "./bash.service";
 import { LoggerService } from "./logger.service";
 import { environment } from "src/environment";

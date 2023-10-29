@@ -3,6 +3,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { environment } from './environment';
 import { ApiService } from './api.service';
+import * as fs from 'fs';
 import * as https from 'https';
 import * as http from 'http';
 import express from 'express';
@@ -15,8 +16,7 @@ import * as schedule from 'node-schedule';
 import { httpsOptions } from './ssl/ssl';
 import * as keepixSsh from 'keepix-ssh';
 import path from 'path';
-import next from 'next';
-import { parse } from 'url';
+import url from 'url';
 
 async function bootstrap() {
 
@@ -76,39 +76,43 @@ async function bootstrap() {
   const httpServer = http.createServer(server).listen(environment.httpPort, environment.ip);
   const httpsServer = https.createServer(await httpsOptions(), server).listen(environment.httpsPort, environment.ip);
 
+  app.get(LoggerService).log(`Api started on (https ${environment.ip}:${environment.httpsPort}), (http ${environment.ip}:${environment.httpPort})`);
+  app.get(ApiService).schedule(); // run api Scheduler
+
+  // ssh server
   const sshApp = express();
-  const sshServer = https.createServer(await httpsOptions(), sshApp).listen(9001, environment.ip);
+  const sshServer = https.createServer(await httpsOptions(), sshApp).listen(12042, environment.ip);
   keepixSsh.runSshApp(sshApp, sshServer, path.join(__dirname, '..'), {
     name: 'orangepi',
     password: 'orangepi'
   });
   
-  const hostname = 'localhost'
-  const port = 3000
-  console.log(`${environment.appDirectory[environment.platform]}/../`);
-  // when using middleware `hostname` and `port` must be provided below
-  const nextApp = next({ dev: false, hostname, port, dir: environment.ENV == 'prod' ? `${environment.appDirectory[environment.platform]}/release/keepix.application-interface` : `${environment.appDirectory[environment.platform]}/../keepix.application-interface` })
-  const handle = nextApp.getRequestHandler()
-  
-  await nextApp.prepare();
-  const nextServerHandler = async (req, res) => {
-    try {
-      // Be sure to pass `true` as the second argument to `url.parse`.
-      // This tells it to parse the query portion of the URL.
-      const parsedUrl = parse(req.url, true)
-      await handle(req, res, parsedUrl)
-    } catch (err) {
-      console.error('Error occurred handling')
-      res.statusCode = 500
-      res.end('internal server error')
-    }
-  };
-  const nextHttpServer = http.createServer(nextServerHandler).listen(environment.webAppHttpPort, environment.ip);
-  const nextHttpsServer = https.createServer(await httpsOptions(), nextServerHandler).listen(environment.webAppHttpsPort, environment.ip);
 
-  app.get(LoggerService).log(`Api started on (https ${environment.ip}:${environment.httpsPort}), (http ${environment.ip}:${environment.httpPort})`);
-  app.get(LoggerService).log(`WebApp started on (https ${environment.ip}:${environment.webAppHttpsPort}), (http ${environment.ip}:${environment.webAppHttpPort})`);
-  app.get(ApiService).schedule(); // run api Scheduler
+  // front-end
+  const fileEntry = path.parse(require.main.filename).base;
+  const packageDirectory = fileEntry === 'keepix-server' ? path.join(path.dirname(require.main.filename), '..') : path.join(path.dirname(require.main.filename), '../..');
+  const frontApp = express();
+  const fronStaticDirectory = path.join(packageDirectory, 'node_modules/keepix-application-interface-build');
+
+  frontApp.use((req, res, next) => {
+    if (req.url.split('?')[0] == '/') {
+      req.url = '/index.html';
+    }
+    const urlObj = url.parse( req.url, true, false );
+
+    if (!fs.existsSync(path.join(fronStaticDirectory, urlObj.pathname))) {
+      req.url = '/index.html';
+    }
+    next();
+  });
+  frontApp.use(express.static(fronStaticDirectory));
+  let nextHttpServer = undefined;
+  let nextHttpsServer = undefined;
+  if (!process.argv.join(' ').includes('--disable-front')) {
+    nextHttpServer = http.createServer(frontApp).listen(environment.webAppHttpPort, environment.ip);
+    nextHttpsServer = https.createServer(await httpsOptions(), frontApp).listen(environment.webAppHttpsPort, environment.ip);
+    app.get(LoggerService).log(`WebApp started on (https ${environment.ip}:${environment.webAppHttpsPort}), (http ${environment.ip}:${environment.webAppHttpPort})`);
+  }
 
   // ssl auto update
   schedule.scheduleJob('*/1 * * * *' /* 10min */, async () => {
@@ -116,7 +120,9 @@ async function bootstrap() {
     let options = await httpsOptions();
     httpsServer.setSecureContext(options);
     sshServer.setSecureContext(options);
-    nextHttpsServer.setSecureContext(options);
+    if (nextHttpsServer != undefined) {
+      nextHttpsServer.setSecureContext(options);
+    }
   });
 }
 bootstrap();

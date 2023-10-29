@@ -2,14 +2,14 @@ import * as fs from 'fs';
 import { name, version } from '../package.json';
 import path from 'path';
 
-const env = path.join(__dirname, `../..`).endsWith('.keepix') ? 'prod' : 'dev';
+const env = 'prod';
 const platform = process.platform.replace("darwin", "osx").replace("win32", "win");
-const appDataPath = env == 'prod' ? path.join(platform == 'win' ? process.env.APPDATA : process.env.HOME, '.keepix') : path.join(__dirname, `..`);
+const appDataPath = path.join(platform == 'win' ? process.env.APPDATA : process.env.HOME, '.keepix');
 
 export const environment = {
     ENV: env,
     appTitle: name,
-    appVersion: `v${version}`,
+    appVersion: `${version}`,
     appDescription: '',
     appTag: name,
     httpPort: 2000,

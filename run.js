@@ -1,1 +1,1 @@
-export * from 'release/src/main';
+export * from 'src/main';

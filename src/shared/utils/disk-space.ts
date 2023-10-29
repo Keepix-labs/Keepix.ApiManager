@@ -10,7 +10,6 @@ export const getDiskSpace = async () => {
                 total: 1
               });
             }
-            console.log(stats);
             resolve({
                 free: stats.bsize*stats.bfree,
                 used: (stats.bsize*stats.blocks) - (stats.bsize*stats.bfree),
