@@ -6,11 +6,11 @@ const { exec } = require('child_process');
 const keepixBuildPackageName = 'keepix-server-build';
 const currentDir = __dirname;
 const npmNodeModulesGlobalDir = path.join(currentDir, '../..');
-const npmBinGlobalDir = path.join(currentDir, '../../../../bin');
 const keepixProgramDir = path.join(npmNodeModulesGlobalDir, keepixBuildPackageName);
 const saveOfKeepixDir = path.join(npmNodeModulesGlobalDir, `.-save-${keepixBuildPackageName}`);
 const platform = process.platform.replace("darwin", "osx").replace("win32", "win");
 const appDataPath = path.join(platform == 'win' ? process.env.APPDATA : process.env.HOME, '.keepix');
+const npmBinGlobalDir = platform == 'win' ? path.join(currentDir, '../../../') : path.join(currentDir, '../../../../bin');
 
 const rollbackFn = () => {
     if (fs.existsSync(keepixProgramDir)) { // garder le dossier de coter.
@@ -109,8 +109,12 @@ const getKeepixApiResponse = async () => {
         if ((await installFn(versionAsked)).success === false) {
             console.log('npm install failed.');
             rollbackFn();
-            await restartPm2Fn();
-            return ;
+            if (process.argv[2] == 'pm2') {
+                await restartPm2Fn();
+                return ;
+            } else {
+                // just restart the process
+            }
         } else {
             if ((await chmod777Binary()).success === false) {
                 console.log('chmod 777 bin failed.');
@@ -145,5 +149,11 @@ const getKeepixApiResponse = async () => {
     }
 
     // run process
+    
+    // clean process
+    Object.keys(require.cache).forEach((key) => {
+        delete require.cache[key];
+    });
+
     const main = require('../run');
 })();

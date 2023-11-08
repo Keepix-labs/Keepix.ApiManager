@@ -17,6 +17,7 @@ import { httpsOptions } from './ssl/ssl';
 import * as keepixSsh from 'keepix-ssh';
 import path from 'path';
 import url from 'url';
+import { BindService } from './shared/bind.service';
 
 async function bootstrap() {
 
@@ -93,12 +94,17 @@ async function bootstrap() {
   const httpServer = http.createServer(server).listen(environment.httpPort, environment.ip);
   const httpsServer = https.createServer(await httpsOptions(), server).listen(environment.httpsPort, environment.ip);
 
+  app.get(BindService).addExpressServer(server);
+  app.get(BindService).addHttpServer(httpServer);
+  app.get(BindService).addHttpsServer(httpsServer);
   app.get(LoggerService).log(`Api started on (https ${environment.ip}:${environment.httpsPort}), (http ${environment.ip}:${environment.httpPort})`);
   app.get(ApiService).schedule(); // run api Scheduler
 
   // ssh server
   const sshApp = express();
   const sshServer = https.createServer(await httpsOptions(), sshApp).listen(12042, environment.ip);
+  app.get(BindService).addExpressServer(sshApp);
+  app.get(BindService).addHttpsServer(sshServer);
   keepixSsh.runSshApp(sshApp, sshServer, path.join(__dirname, '..'), {
     name: 'orangepi',
     password: 'orangepi'
@@ -109,6 +115,7 @@ async function bootstrap() {
   const fileEntry = path.parse(require.main.filename).base;
   const packageDirectory = fileEntry === 'keepix-server' ? path.join(path.dirname(require.main.filename), '..') : path.join(path.dirname(require.main.filename), '../..');
   const frontApp = express();
+  app.get(BindService).addExpressServer(frontApp);
   const fronStaticDirectory = path.join(packageDirectory, 'node_modules/keepix-application-interface-build');
 
   frontApp.use((req, res, next) => {
@@ -129,10 +136,12 @@ async function bootstrap() {
     nextHttpServer = http.createServer(frontApp).listen(environment.webAppHttpPort, environment.ip);
     nextHttpsServer = https.createServer(await httpsOptions(), frontApp).listen(environment.webAppHttpsPort, environment.ip);
     app.get(LoggerService).log(`WebApp started on (https ${environment.ip}:${environment.webAppHttpsPort}), (http ${environment.ip}:${environment.webAppHttpPort})`);
+    app.get(BindService).addHttpServer(nextHttpServer);
+    app.get(BindService).addHttpsServer(nextHttpsServer);
   }
 
   // ssl auto update
-  schedule.scheduleJob('*/1 * * * *' /* 10min */, async () => {
+  app.get(BindService).addScheduler(schedule.scheduleJob('*/1 * * * *' /* 10min */, async () => {
     app.get(LoggerService).log('ssl auto-update');
     let options = await httpsOptions();
     httpsServer.setSecureContext(options);
@@ -140,6 +149,6 @@ async function bootstrap() {
     if (nextHttpsServer != undefined) {
       nextHttpsServer.setSecureContext(options);
     }
-  });
+  }));
 }
 bootstrap();

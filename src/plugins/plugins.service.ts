@@ -107,9 +107,13 @@ export class PluginsService {
 
     private async detectPluginsAndLatestVersions() {
         const pluginList = await this.getListOfPlugins();
-        const internalPlugins = this.propertiesService.getProperty('plugins', []);
+        if (pluginList.length <= 0) {
+            return ;
+        }
+        let internalPlugins = this.propertiesService.getProperty('plugins', []);
         const newPlugins = pluginList.filter(x => !internalPlugins.find(p => p.id == x.id));
 
+        internalPlugins = internalPlugins.filter(x => x.installed || pluginList.map(p => p.id).includes(x.id));
         if (newPlugins.length > 0) {
             internalPlugins.push(... newPlugins.map(x => {
                 return {

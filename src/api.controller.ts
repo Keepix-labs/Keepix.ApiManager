@@ -8,6 +8,7 @@ import { ApiService } from './api.service';
 import { PropertiesService } from './shared/storage/properties.service';
 import path from 'path';
 import { spawn } from 'child_process';
+import { BindService } from './shared/bind.service';
 
 @ApiTags('App')
 @Controller('')
@@ -17,6 +18,7 @@ export class ApiController {
         private wapService: WapService,
         private bashService: BashService,
         private apiService: ApiService,
+        private bindService: BindService,
         private propertiesService: PropertiesService) {
     }
 
@@ -71,6 +73,26 @@ export class ApiController {
         }
     }
 
+    @Get('/app/restart')
+    async restart() {
+        setTimeout(() => {
+
+            this.bindService.clean();
+            require("child_process")
+                .spawn(
+                  process.argv.shift(),
+                  process.argv,
+                  {
+                    cwd: process.cwd(),
+                    detached: false,
+                    stdio: "inherit"
+                  }
+                );
+        }, 1000);
+
+        return true;
+    }
+
     @ApiQuery({ name: 'version', type: 'string', required: true })
     @ApiBody({ type: Object })
     @ApiOperation({ summary: 'Install a new keepix api version.' })
@@ -88,9 +110,13 @@ export class ApiController {
 
         fs.writeFileSync(path.join(environment.appDirectory[environment.platform], 'update'), version);
 
-        this.bashService.execWrapper(`pm2 restart Keepix`).then(() => {
-            console.log('Update launched.');
-        });
+        if (environment.platform == 'linux') {
+            this.bashService.execWrapper(`pm2 restart Keepix`).then(() => {
+                console.log('Update launched.');
+            });
+        } else {
+            await this.restart();
+        }
 
         return { success: true, description: 'Installation Running.' };
     }

@@ -6,6 +6,7 @@ import { FirstLoadService } from './first-load.service';
 import { PropertiesService } from './storage/properties.service';
 import { LoggerService } from './logger.service';
 import { AnalyticsService } from './storage/analytics.service';
+import { BindService } from './bind.service';
 
 @Module({
   controllers: [],
@@ -16,7 +17,8 @@ import { AnalyticsService } from './storage/analytics.service';
     FirstLoadService,
     PropertiesService,
     LoggerService,
-    AnalyticsService
+    AnalyticsService,
+    BindService
   ],
   exports: [
     BashService,
@@ -25,7 +27,8 @@ import { AnalyticsService } from './storage/analytics.service';
     FirstLoadService,
     PropertiesService,
     LoggerService,
-    AnalyticsService
+    AnalyticsService,
+    BindService
   ]
 })
 export class SharedModule {}

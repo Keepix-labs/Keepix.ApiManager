@@ -11,6 +11,7 @@ import { LoggerService } from './shared/logger.service';
 import { PluginsService } from './plugins/plugins.service';
 import { environment } from './environment';
 import path from 'path';
+import { BindService } from './shared/bind.service';
 
 @Injectable()
 export class ApiService {
@@ -21,16 +22,17 @@ export class ApiService {
         private loggerService: LoggerService,
         private wapService: WapService,
         private bashService: BashService,
+        private bindService: BindService,
         private firstLoadService: FirstLoadService,
         private pluginsService: PluginsService) {
     }
 
     schedule() {
         this.loggerService.log(`${this.title} Start`);
-        schedule.scheduleJob('*/10 * * * *' /* 10min */, () => this.runEach10Minutes());
-        setInterval(() => {
+        this.bindService.addScheduler(schedule.scheduleJob('*/10 * * * *' /* 10min */, () => this.runEach10Minutes()));
+        this.bindService.addInterval(setInterval(() => {
             this.runEach10Seconds();
-        }, 1000 * 10); // 10 sec
+        }, 1000 * 10)); // 10 sec
         this.initialRun(); // first run
     }
 
