@@ -178,7 +178,58 @@ export class PluginsController {
         @Param('pluginId') pluginId,
         @Body() body: any,
         @Query('version') version: string = "latest") {
-        return await this.installPlugin(pluginId, body, version);
+        const taskId = `${pluginId}-update`;
+        if (this.runningTasks[taskId] != undefined && this.runningTasks[taskId].status == 'INSTALLING') {
+            return { error: 'Update Already In progress' };
+        }
+
+        this.runningTasks[taskId] = {
+            status: 'UPDATING',
+            description: 'Downloading'
+        };
+        let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
+
+        (new Promise(async () => {
+            if (plugin == undefined) {
+                this.runningTasks[taskId] = {
+                    status: 'ERROR',
+                    description: 'Plugin not found'
+                };
+                return ;
+            }
+            if (!plugin.installed) {
+                this.runningTasks[taskId] = {
+                    status: 'ERROR',
+                    description: 'Plugin Not Installed.'
+                };
+                return ;
+            }
+
+            const resultOfNpmInstall = await this.bashService.execWrapper(`npm install -g ${plugin.packageName}@${version}`);
+
+            const versionOfInstalledPlugin = await this.pluginsService.getVersionOfPlugin(plugin);
+            if (versionOfInstalledPlugin == undefined) {
+                this.runningTasks[taskId] = {
+                    status: 'ERROR',
+                    description: 'Update failed.'
+                };
+                return ;
+            }
+
+            // update plugin
+            plugin.version = versionOfInstalledPlugin;
+            this.propertiesService.save();
+
+            await this.pluginsService.loadInstalledPlugins();
+            
+            this.runningTasks[taskId] = {
+                status: 'FINISHED',
+                description: 'Updated with Success.'
+            };
+        })).then(() => {
+            console.log('Update Finished');
+        });
+        return { taskId: taskId };
     }
 
     @ApiParam({ name: 'pluginId', type: 'string' })

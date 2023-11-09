@@ -104,8 +104,8 @@ export class PluginsService {
     public async getLatestVersionOfPlugin(plugin) {
         const result: any = await this.bashService.execWrapper(`npm pack --dry-run ${plugin.packageName} --json`);
 
-        if (result != undefined && result != '' && JSON.parse(result).length > 0 && JSON.parse(result)[0].version != undefined) {
-            return JSON.parse(result).version;
+        if (result !== undefined && result !== '' && JSON.parse(result).length > 0 && JSON.parse(result)[0].version !== undefined) {
+            return JSON.parse(result)[0].version;
         }
         return null;
     }
