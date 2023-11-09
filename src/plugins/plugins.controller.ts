@@ -67,48 +67,39 @@ export class PluginsController {
                 };
                 return ;
             }
-            await this.pluginsService.downloadAndUnTarPlugin(plugin,
-                () => {
-                    this.runningTasks[taskId] = {
-                        status: 'INSTALLING',
-                        description: 'Download Finished'
-                    };
-                },
-                () => {
-                    this.runningTasks[taskId] = {
-                        status: 'INSTALLING',
-                        description: 'Uncompressing Finished'
-                    };
-                },
-                (version) => {
-                    this.runningTasks[taskId] = {
-                        status: 'INSTALLING',
-                        description: 'Saving'
-                    };
-                    let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
-                    plugin.version = version;
-                    plugin.installed = true;
-                    plugin.ready = false;
-                    this.propertiesService.save();
-                }
-            );
+
+            const resultOfNpmInstall = await this.bashService.execWrapper(`npm install -g ${plugin.packageName}@${version}`);
+
+            console.log(resultOfNpmInstall);
+
+            const versionOfInstalledPlugin = await this.pluginsService.getVersionOfPlugin(plugin);
+
+            console.log(versionOfInstalledPlugin);
+            if (versionOfInstalledPlugin == undefined) {
+                this.runningTasks[taskId] = {
+                    status: 'ERROR',
+                    description: 'Installation failed.'
+                };
+                return ;
+            }
+
+            // update plugin
+            plugin.installed = true;
+            plugin.version = versionOfInstalledPlugin;
+            this.propertiesService.save();
+
             await this.pluginsService.loadInstalledPlugins();
+            
             this.runningTasks[taskId] = {
                 status: 'INSTALLING',
                 description: 'Running Installation Plugin.'
             };
 
-            let intervalId = undefined;
-
             this.runCommandToPlugin(pluginId, {
                 key: 'install',
                 ... body
             }).then((resultOfExec) => {
-                if (intervalId != undefined) {
-                    clearInterval(intervalId);
-                }
                 if (resultOfExec.result == true) {
-                    let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
                     plugin.ready = true;
                     this.propertiesService.save();
                     this.runningTasks[taskId] = {
@@ -122,24 +113,9 @@ export class PluginsController {
                     };
                 }
             });
-
-            intervalId = setInterval(async () => {
-                const statusInformation = await this.runCommandToPlugin(pluginId, {
-                    key: 'status'
-                });
-                if (statusInformation.status != undefined) {
-                    if (statusInformation.status != 'INSTALLING') {
-                        clearInterval(intervalId);
-                    } else {
-                        this.runningTasks[taskId] = statusInformation;
-                    }
-                }
-            }, 2000);
-
         })).then(() => {
             console.log('Installation Finished');
         });
-
         return { taskId: taskId };
     }
 
@@ -202,95 +178,7 @@ export class PluginsController {
         @Param('pluginId') pluginId,
         @Body() body: any,
         @Query('version') version: string = "latest") {
-        const taskId = `${pluginId}-update`;
-
-        if (this.runningTasks[taskId] != undefined && this.runningTasks[taskId].status == 'UPDATING') {
-            return { error: 'Update Already In progress' };
-        }
-
-        this.runningTasks[taskId] = {
-            status: 'UPDATING',
-            description: 'Downloading'
-        };
-        let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
-
-        (new Promise(async () => {
-            if (plugin == undefined) {
-                this.runningTasks[taskId] = {
-                    status: 'ERROR',
-                    description: 'Plugin not found'
-                };
-                return ;
-            }
-            if (plugin.installed == false) {
-                this.runningTasks[taskId] = {
-                    status: 'ERROR',
-                    description: 'Plugin not Installed.'
-                };
-                return ;
-            }
-
-            if (plugin.latestVersion == plugin.version) {
-                this.runningTasks[taskId] = {
-                    status: 'ERROR',
-                    description: 'Already Updated.'
-                };
-                return ;
-            }
-
-            const statusInformation = await this.runCommandToPlugin(pluginId, {
-                key: 'status'
-            });
-
-            if (statusInformation.status == undefined
-                || statusInformation.status != 'STOPPED') {
-                    this.runningTasks[taskId] = {
-                        status: 'ERROR',
-                        description: 'Please stop plugin before updating.'
-                    };
-                    return ;
-            }
-
-            await this.pluginsService.downloadAndUnTarPlugin(plugin,
-                () => {
-                    this.runningTasks[taskId] = {
-                        status: 'UPDATING',
-                        description: 'Download Finished'
-                    };
-                },
-                () => {
-                    this.runningTasks[taskId] = {
-                        status: 'UPDATING',
-                        description: 'Uncompressing Finished'
-                    };
-                },
-                (version) => {
-                    this.runningTasks[taskId] = {
-                        status: 'UPDATING',
-                        description: 'Saving'
-                    };
-                    let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
-                    plugin.version = version;
-                    plugin.installed = true;
-                    plugin.ready = false;
-                    this.propertiesService.save();
-                }
-            );
-            this.pluginsService.plugins[pluginId] = undefined;
-            await this.pluginsService.loadInstalledPlugins();
-
-            // todo call function on-update.
-
-            this.runningTasks[taskId] = {
-                status: 'FINISHED',
-                description: 'Update finished.'
-            };
-
-        })).then(() => {
-            console.log('Update Finished');
-        });
-
-        return { taskId: taskId };
+        return await this.installPlugin(pluginId, body, version);
     }
 
     @ApiParam({ name: 'pluginId', type: 'string' })

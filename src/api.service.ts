@@ -57,11 +57,11 @@ export class ApiService {
     }
 
     public async getLatestVersionOfApi() {
-        const result = await this.bashService.execWrapper('npm view keepix-server-build versions --json');
+        // const result = await this.bashService.execWrapper('npm view keepix-server-build versions --json');
+        const result: any = await this.bashService.execWrapper('npm pack --dry-run keepix-server-build --json');
 
-        if (result != undefined && result != '') {
-            const versions = JSON.parse(result);
-            return versions[versions.length - 1];
+        if (result != undefined && result != '' && JSON.parse(result).length > 0 && JSON.parse(result)[0].version != undefined) {
+            return JSON.parse(result).version;
         }
         return null;
     }

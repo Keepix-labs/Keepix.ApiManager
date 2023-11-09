@@ -29,13 +29,13 @@ export class PluginsService {
         const internalPlugins = this.propertiesService.getProperty('plugins', []);
 
         for (let plugin of internalPlugins) {
-            if (this.plugins[plugin.id] == undefined && plugin.installed == true) {
+            if (this.plugins[plugin.id] == undefined && plugin.packageName != undefined) {
                 this.plugins[plugin.id] = {
                     ... plugin,
                     exec: async (argObject) => {
                         return await new Promise((resolve) => {
                             // double stringify for escapes double quotes
-                            exec(`${environment.appDirectory[environment.platform]}/plugins/${plugin.id}/dist/${environment.platformId}/${plugin.id} ${JSON.stringify(JSON.stringify(argObject))}`, (error, stdout, stderr) => {
+                            exec(`${environment.globalNodeModulesDirectory}/${plugin.packageName}/dist/${environment.platformId}/${plugin.id} ${JSON.stringify(JSON.stringify(argObject))}`, (error, stdout, stderr) => {
                                 const result = JSON.parse(stdout);
     
                                 resolve({
@@ -50,59 +50,14 @@ export class PluginsService {
         }
     }
 
-    public async downloadAndUnTarPlugin(
-        plugin: any,
-        onDownloaded = () => {},
-        onUnTar = () => {},
-        onInstalled = (version) => {}) {
-        return await new Promise(async (resolve) => {
-            await this.downloadPlugin(plugin, async (fileTarGzPath, version, downloadStatus) => {
-                console.log(fileTarGzPath, version, downloadStatus);
-                onDownloaded();
-    
-                const decompress = require('decompress');
-                const decompressTargz = require('decompress-targz');
-                await decompress(fileTarGzPath, `${environment.appDirectory[environment.platform]}/plugins/${plugin.id}`, {
-                    plugins: [
-                        decompressTargz()
-                    ]
-                });
-                console.log('Files decompressed');
-                onUnTar();
-                
-                // remove tar.gz file
-                fs.rmSync(fileTarGzPath, {
-                    recursive: true,
-                    force: true
-                });
-                
-                onInstalled(version);
-                resolve(true);
-            });
-        });
-    }
-
-    private async downloadPlugin(plugin, cb = async (filePath, version, downloadStatus) => {}) {
-        if (plugin.latestVersion == undefined) {
-            return false;
+    public async getVersionOfPlugin(plugin: any) {
+        const pathOfPackageJsonPlugin = `${environment.globalNodeModulesDirectory}/${plugin.packageName}/package.json`;
+        console.log(pathOfPackageJsonPlugin);
+        if (!fs.existsSync(pathOfPackageJsonPlugin)) {
+            return undefined;
         }
-        if (plugin.latestVersion == plugin.version) {
-            return false;
-        }
-        const Downloader = require("nodejs-file-downloader");
-        const downloader = new Downloader({
-            url: `${plugin.repositoryUrl}/releases/download/${plugin.latestVersion}/${environment.platformId}.tar.gz`,
-            directory: `${environment.appDirectory[environment.platform]}/plugins/${plugin.id}`, //This folder will be created, if it doesn't exist.   
-        });
-        
-        try {
-            const {filePath,downloadStatus} = await downloader.download();
-            await cb(filePath, plugin.latestVersion, downloadStatus);
-        } catch (error) {
-            console.log("Download failed", error);
-            return false;
-        }
-        return true;
+        const packageJson = JSON.parse(fs.readFileSync(pathOfPackageJsonPlugin).toString());
+        return packageJson.version;
     }
 
     private async detectPluginsAndLatestVersions() {
@@ -110,7 +65,7 @@ export class PluginsService {
         if (pluginList.length <= 0) {
             return ;
         }
-        let internalPlugins = this.propertiesService.getProperty('plugins', []);
+        let internalPlugins = this.propertiesService.getProperty('plugins', []).filter(x => x.packageName != undefined);
         const newPlugins = pluginList.filter(x => !internalPlugins.find(p => p.id == x.id));
 
         internalPlugins = internalPlugins.filter(x => x.installed || pluginList.map(p => p.id).includes(x.id));
@@ -125,7 +80,7 @@ export class PluginsService {
         }
 
         for (let plugin of internalPlugins) {
-            const latestVersion = await this.getLatestVersionOfPluginGit(plugin.repositoryUrl);
+            const latestVersion = await this.getLatestVersionOfPlugin(plugin);
 
             if (latestVersion != undefined
                 && plugin.latestVersion != latestVersion) {
@@ -146,12 +101,11 @@ export class PluginsService {
         }
     }
 
-    private async getLatestVersionOfPluginGit(pluginRepositoryUrl) {
-        const result = await fetch(`${pluginRepositoryUrl}/releases/latest`);
+    public async getLatestVersionOfPlugin(plugin) {
+        const result: any = await this.bashService.execWrapper(`npm pack --dry-run ${plugin.packageName} --json`);
 
-        if (result.redirected) {
-            const d = result.url.split('/');
-            return d[d.length - 1];
+        if (result != undefined && result != '' && JSON.parse(result).length > 0 && JSON.parse(result)[0].version != undefined) {
+            return JSON.parse(result).version;
         }
         return null;
     }

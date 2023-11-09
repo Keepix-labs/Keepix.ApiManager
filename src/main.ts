@@ -56,16 +56,30 @@ async function bootstrap() {
       next();
   });
 
+  // plugin view static files
   app.use((req, res, next) => {
-    // if (req.url.startWith('/plugins/'))
-    // if (req.url.split('?')[0] == '/') {
-    //   req.url = '/index.html';
-    // }
-    // const urlObj = url.parse( req.url, true, false );
+    if (req?.url?.startsWith('/plugins/')) {
+      const pluginIdAndSubPath = (req.url.split('/plugins/')[1]).split('/');
+      const pluginId = pluginIdAndSubPath[0];
+      const subPathWithView = pluginIdAndSubPath.slice(1).join('/');
 
-    // if (!fs.existsSync(path.join(fronStaticDirectory, urlObj.pathname))) {
-    //   req.url = '/index.html';
-    // }
+      const plugins = app.get(PropertiesService).getProperty('plugins');
+      const plugin = plugins.find(x => x.id == pluginId);
+
+      if (subPathWithView.startsWith('view') && plugin != undefined) {
+        const subPath = subPathWithView.substr(4);
+
+        const staticPluginPath = path.join(environment.globalNodeModulesDirectory, plugin.packageName);
+        
+        if (!fs.existsSync(path.join(staticPluginPath, subPath.split('?')[0]))) {
+          req.url = '/index.html';
+        }
+        req.url = subPath;
+
+        express.static(staticPluginPath)(req, res, next);
+        return ;
+      }
+    }
     next();
   });
 
@@ -116,7 +130,7 @@ async function bootstrap() {
   const packageDirectory = fileEntry === 'keepix-server' ? path.join(path.dirname(require.main.filename), '..') : path.join(path.dirname(require.main.filename), '../..');
   const frontApp = express();
   app.get(BindService).addExpressServer(frontApp);
-  const fronStaticDirectory = path.join(packageDirectory, 'node_modules/keepix-application-interface-build');
+  const frontStaticDirectory = path.join(packageDirectory, 'node_modules/keepix-application-interface-build');
 
   frontApp.use((req, res, next) => {
     if (req.url.split('?')[0] == '/') {
@@ -124,12 +138,12 @@ async function bootstrap() {
     }
     const urlObj = url.parse( req.url, true, false );
 
-    if (!fs.existsSync(path.join(fronStaticDirectory, urlObj.pathname))) {
+    if (!fs.existsSync(path.join(frontStaticDirectory, urlObj.pathname))) {
       req.url = '/index.html';
     }
     next();
   });
-  frontApp.use(express.static(fronStaticDirectory));
+  frontApp.use(express.static(frontStaticDirectory));
   let nextHttpServer = undefined;
   let nextHttpsServer = undefined;
   if (!process.argv.join(' ').includes('--disable-front')) {
