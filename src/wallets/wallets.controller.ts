@@ -40,7 +40,7 @@ export class WalletsController {
     @ApiBody({ type: Object })
     @Post('new')
     @ApiOperation({ summary: 'Create new wallet.' })
-    async new(@Body() options: any) {
+    async new(@Body() body: any) {
 
         const generativeWalletFunctions = {
             'evm': (options) => {
@@ -76,13 +76,43 @@ export class WalletsController {
             }
         };
 
-        if (generativeWalletFunctions[options.type] == undefined) {
+        console.log(body);
+
+        if (generativeWalletFunctions[body.type] == undefined) {
             return {
                 success: false,
                 description: 'Type not found.'
             };
         }
 
-        return generativeWalletFunctions[options.type](options);
+        return generativeWalletFunctions[body.type](body);
+    }
+
+    @ApiBody({ type: Object })
+    @Post('delete')
+    @ApiOperation({ summary: 'Delete a wallet.' })
+    async delete(@Body() body: any) {
+
+        if (body.address == undefined) {
+            return {
+                success: false,
+                description: 'No Address Specified.'
+            };
+        }
+
+        let wallets = this.propertiesService.getProperty('wallets');
+        let targetWallet = wallets.find(x => x.address === body.address);
+        if (targetWallet == undefined) {
+            return {
+                success: false,
+                description: 'Wallet address not found.'
+            };
+        }
+        targetWallet.deleted = true;
+        this.propertiesService.save();
+        return {
+            success: true,
+            description: `Wallet ${body.address} deleted.`
+        };
     }
 }
