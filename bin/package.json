@@ -1,6 +1,6 @@
 {
     "name": "keepix-server-build",
-    "version": "0.0.119",
+    "version": "0.0.127",
     "description": "simple CLI for manage keepix repositories",
     "main": "run.js",
     "bin": {
@@ -21,6 +21,7 @@
         "@nestjs/platform-express": "^10.0.0",
         "@nestjs/swagger": "^7.1.11",
         "bitcore-lib": "^10.0.17",
+        "check-disk-space": "^3.4.0",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.0",
         "cors": "^2.8.5",
@@ -32,7 +33,7 @@
         "https": "^1.0.0",
         "increase-build-package-public-directory": "^0.0.3",
         "keepix-application-interface-build": "^0.0.15",
-        "keepix-ssh": "^0.4.18",
+        "keepix-ssh": "^0.4.22",
         "moment": "^2.29.4",
         "node-fetch": "^3.3.2",
         "node-schedule": "^2.1.1",

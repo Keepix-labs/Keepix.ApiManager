@@ -1,20 +1,14 @@
-import { statfs } from 'fs';
+import checkDiskSpace from 'check-disk-space';
+import { environment } from 'src/environment';
 
 export const getDiskSpace = async () => {
    return await new Promise((resolve) => {
-        statfs('/', (err, stats) => {
-            if (err) {
-              resolve({
-                free: 1,
-                available: 1,
-                total: 1
-              });
-            }
+        checkDiskSpace(environment.platform == 'win' ? 'C:/' : '/').then((diskSpace) => {
             resolve({
-                free: stats.bsize*stats.bfree,
-                used: (stats.bsize*stats.blocks) - (stats.bsize*stats.bfree),
-                total: stats.bsize*stats.blocks
-            });
+                free: diskSpace.free,
+                used: diskSpace.size - diskSpace.free,
+                total: diskSpace.size
+              });
         });
     });
 };
