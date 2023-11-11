@@ -61,7 +61,7 @@ export class ApiService {
         const result: any = await this.bashService.execWrapper('npm pack --dry-run keepix-server-build --json');
 
         if (result != undefined && result != '' && JSON.parse(result).length > 0 && JSON.parse(result)[0].version != undefined) {
-            return JSON.parse(result).version;
+            return JSON.parse(result)[0].version;
         }
         return null;
     }
