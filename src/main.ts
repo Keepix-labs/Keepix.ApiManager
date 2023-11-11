@@ -63,7 +63,7 @@ async function bootstrap() {
       const pluginId = pluginIdAndSubPath[0];
       const subPathWithView = pluginIdAndSubPath.slice(1).join('/');
 
-      const plugins = app.get(PropertiesService).getProperty('plugins');
+      const plugins = app.get(PropertiesService).getProperty('plugins', []);
       const plugin = plugins.find(x => x.id == pluginId);
 
       if (subPathWithView.startsWith('view') && plugin != undefined) {

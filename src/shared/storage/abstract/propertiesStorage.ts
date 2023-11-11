@@ -19,10 +19,17 @@ export class PropertiesStorage implements PropertiesStorageInterface {
         if (!fs.existsSync(this.propertiesFilePath)) {
             fs.writeFileSync(this.propertiesFilePath, '{}');
         }
+
         const stringFileData = fs.readFileSync(this.propertiesFilePath).toString();
         const jsonData = JSON.parse(stringFileData);
 
         this.propertiesMap = jsonData;
+
+        // temporary for upgrade
+        if (this.propertiesMap['wallets'] != undefined && !Array.isArray(this.propertiesMap['wallets'])) {
+            this.propertiesMap['wallets'] = [];
+            this.saveProperties();
+        }
     }
 
     protected saveProperties() {
