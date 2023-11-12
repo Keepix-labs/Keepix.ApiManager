@@ -5,6 +5,7 @@ import { PropertiesService } from "src/shared/storage/properties.service";
 import * as fs from 'fs';
 import { BashService } from "src/shared/bash.service";
 import { exec } from 'child_process';
+import fetch from 'node-fetch';
 
 @Injectable()
 export class PluginsService {

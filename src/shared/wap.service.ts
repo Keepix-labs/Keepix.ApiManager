@@ -5,6 +5,7 @@ import { AnsibleService } from "./ansible.service";
 import { BashService } from "./bash.service";
 import { LoggerService } from "./logger.service";
 import { environment } from "src/environment";
+import fetch from 'node-fetch';
 
 @Injectable()
 export class WapService {

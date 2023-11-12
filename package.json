@@ -40,7 +40,7 @@
         "keepix-application-interface-build": "^0.0.15",
         "keepix-ssh": "^0.4.22",
         "moment": "^2.29.4",
-        "node-fetch": "^3.3.2",
+        "node-fetch": "^2.7.0",
         "node-schedule": "^2.1.1",
         "nodejs-file-downloader": "^4.12.1",
         "reflect-metadata": "^0.1.13",
