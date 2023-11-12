@@ -3,6 +3,7 @@ import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ethers } from 'ethers';
 import { PropertiesService } from 'src/shared/storage/properties.service';
 import * as bitcore from 'bitcore-lib';
+import fetch from 'node-fetch';
 
 @ApiTags('Wallets')
 @Controller('wallets')
@@ -44,7 +45,7 @@ export class WalletsController {
 
         const generativeWalletFunctions = {
             'evm': (options) => {
-                const wallets = this.propertiesService.getProperty('wallets');
+                const wallets = this.propertiesService.getProperty('wallets', []);
                 const hdnode = require('@ethersproject/hdnode');  
                 const mnemonic = hdnode.entropyToMnemonic(ethers.randomBytes(32));
                 const wallet = ethers.Wallet.fromPhrase(mnemonic);
@@ -62,7 +63,7 @@ export class WalletsController {
             },
             'bitcoin': (options) => {
                 const privateKey = new bitcore.PrivateKey();
-                const wallets = this.propertiesService.getProperty('wallets');
+                const wallets = this.propertiesService.getProperty('wallets', []);
                 this.propertiesService.setProperty('wallets', [
                     ... wallets,
                     {
@@ -100,7 +101,7 @@ export class WalletsController {
             };
         }
 
-        let wallets = this.propertiesService.getProperty('wallets');
+        let wallets = this.propertiesService.getProperty('wallets', []);
         let targetWallet = wallets.find(x => x.address === body.address);
         if (targetWallet == undefined) {
             return {
