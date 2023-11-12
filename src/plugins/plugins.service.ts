@@ -21,6 +21,7 @@ export class PluginsService {
 
     async run() {
         this.loggerService.log(`${this.title} Run`);
+        console.log('Before Detect getListOfPlugins');
         await this.detectPluginsAndLatestVersions();
         await this.loadInstalledPlugins();
     }
@@ -95,8 +96,10 @@ export class PluginsService {
         try  {
             const result = await fetch(environment.pluginListUrl);
             const lst = await result.json();
+            console.log('getListOfPlugins', lst);
             return lst as any;
         } catch (e) {
+            console.log('Error when getListOfPlugins', e);
             return [];
         }
     }
