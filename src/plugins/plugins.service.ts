@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { BashService } from "src/shared/bash.service";
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
+import path from "path";
 
 @Injectable()
 export class PluginsService {
@@ -37,7 +38,9 @@ export class PluginsService {
                     exec: async (argObject) => {
                         return await new Promise((resolve) => {
                             // double stringify for escapes double quotes
-                            exec(`${environment.globalNodeModulesDirectory}/${plugin.packageName}/dist/${environment.platformId}/${plugin.id} ${JSON.stringify(JSON.stringify(argObject))}`, (error, stdout, stderr) => {
+                            const commandPath = path.join(environment.globalNodeModulesDirectory, `${plugin.packageName}/dist/${environment.platformId}/${plugin.id}`);
+
+                            exec(`${commandPath} ${JSON.stringify(JSON.stringify(argObject))}`, (error, stdout, stderr) => {
                                 const result = JSON.parse(stdout);
     
                                 resolve({
@@ -53,7 +56,7 @@ export class PluginsService {
     }
 
     public async getVersionOfPlugin(plugin: any) {
-        const pathOfPackageJsonPlugin = `${environment.globalNodeModulesDirectory}/${plugin.packageName}/package.json`;
+        const pathOfPackageJsonPlugin = path.join(environment.globalNodeModulesDirectory, `${plugin.packageName}/package.json`);
         console.log(pathOfPackageJsonPlugin);
         if (!fs.existsSync(pathOfPackageJsonPlugin)) {
             return undefined;
