@@ -5,7 +5,7 @@ import path from 'path';
 const env = 'prod';
 const platform = process.platform.replace("darwin", "osx").replace("win32", "win");
 const appDataPath = path.join(platform == 'win' ? process.env.APPDATA : process.env.HOME, '.keepix');
-const npmNodeModulesGlobalDir = path.join(process.argv[0], '../../lib/node_modules');
+const npmNodeModulesGlobalDir = platform == 'win' ? path.join(process.argv[0], '../lib/node_modules') : path.join(process.argv[0], '../../lib/node_modules');
 
 export const environment = {
     ENV: env,
