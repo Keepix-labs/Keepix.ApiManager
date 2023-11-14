@@ -22,10 +22,10 @@ export class PluginsService {
     }
 
     async run() {
-        this.loggerService.log(`${this.title} Run`);
-        console.log('Before Detect getListOfPlugins');
+        this.loggerService.log(`${this.title} Run Started`);
         await this.detectPluginsAndLatestVersions();
         await this.loadInstalledPlugins();
+        this.loggerService.log(`${this.title} Run Finished`);
     }
 
     public async loadInstalledPlugins() {
@@ -57,12 +57,18 @@ export class PluginsService {
 
     public async getVersionOfPlugin(plugin: any) {
         const pathOfPackageJsonPlugin = path.join(environment.globalNodeModulesDirectory, `${plugin.packageName}/package.json`);
-        console.log(pathOfPackageJsonPlugin);
         if (!fs.existsSync(pathOfPackageJsonPlugin)) {
+            this.loggerService.log(`${plugin.id} package.json at ${pathOfPackageJsonPlugin} not found.`);
             return undefined;
         }
-        const packageJson = JSON.parse(fs.readFileSync(pathOfPackageJsonPlugin).toString());
-        return packageJson.version;
+        try  {
+            const packageJson = JSON.parse(fs.readFileSync(pathOfPackageJsonPlugin).toString());
+            this.loggerService.log(`${plugin.id} check version ${packageJson?.version}`);
+            return packageJson?.version;
+        } catch (e) {
+            this.loggerService.log(`${plugin.id} package.json at ${pathOfPackageJsonPlugin} parsing failed.`);
+        }
+        return undefined;
     }
 
     private async detectPluginsAndLatestVersions() {
@@ -71,19 +77,25 @@ export class PluginsService {
             return ;
         }
         let internalPlugins = this.propertiesService.getProperty('plugins', []).filter(x => x.packageName != undefined);
-        const newPlugins = pluginList.filter(x => !internalPlugins.find(p => p.id == x.id));
 
-        internalPlugins = internalPlugins.filter(x => x.installed || pluginList.map(p => p.id).includes(x.id));
+        internalPlugins = internalPlugins.map(x => {
+            const newPluginInformations = pluginList.find(p => p.id === x.id);
+            if (newPluginInformations) { // override new informations
+                this.loggerService.log(`${x.id} Updated.`);
+                return { ... x, ... newPluginInformations };
+            }
+            return x;
+        });
+
+        
+        const newPlugins = pluginList.filter(x => !internalPlugins.find(p => p.id == x.id));
         if (newPlugins.length > 0) {
-            internalPlugins.push(... newPlugins.map(x => {
-                return {
-                    ... x,
-                    installed: false
-                };
-            }));
+            internalPlugins.push(... newPlugins);
+            newPlugins.forEach(x => this.loggerService.log(`${x.id} Detected.`));
             this.loggerService.log(`${newPlugins.length} new plugins Detected.`);
         }
 
+        // try getting lastests versions of each plugins via npm.
         for (let plugin of internalPlugins) {
             const latestVersion = await this.getLatestVersionOfPlugin(plugin);
 
@@ -100,10 +112,10 @@ export class PluginsService {
         try  {
             const result = await fetch(environment.pluginListUrl);
             const lst = await result.json();
-            console.log('getListOfPlugins', lst);
+            this.loggerService.log(`Getting list of plugins Success (${lst.length} Plugins)`);
             return lst as any;
         } catch (e) {
-            console.log('Error when getListOfPlugins', e);
+            this.loggerService.log('Getting list of plugins Failed', e);
             return [];
         }
     }
@@ -112,8 +124,11 @@ export class PluginsService {
         const result: any = await this.bashService.execWrapper(`npm pack --dry-run ${plugin.packageName} --json`);
 
         if (result !== undefined && result !== '' && JSON.parse(result).length > 0 && JSON.parse(result)[0].version !== undefined) {
+            const version = JSON.parse(result)[0].version;
+            this.loggerService.log(`${plugin.id} Latest Version ${version}`);
             return JSON.parse(result)[0].version;
         }
+        this.loggerService.log(`${plugin.id} Getting Latest Version Failed`, result);
         return null;
     }
 }
