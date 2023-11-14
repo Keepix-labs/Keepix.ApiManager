@@ -14,10 +14,19 @@ export const getDiskSpace = async () => {
 };
 
 export const getDiskSpaceInGoString = async () => {
-    const spaceDisk: any = await getDiskSpace();
-    return {
-        free: `${(spaceDisk.free / 1000000000).toFixed(2)} Go`,
-        used: `${(spaceDisk.used / 1000000000).toFixed(2)} Go`,
-        total: `${(spaceDisk.total / 1000000000).toFixed(2)} Go`
-    };
+    try {
+        const spaceDisk: any = await getDiskSpace();
+        return {
+            free: `${(spaceDisk.free / 1000000000).toFixed(2)} Go`,
+            used: `${(spaceDisk.used / 1000000000).toFixed(2)} Go`,
+            total: `${(spaceDisk.total / 1000000000).toFixed(2)} Go`
+        };
+    } catch (e) {
+        console.error('getDiskSpaceInGoString Error', e);
+        return {
+            free: `0 Go`,
+            used: `0 Go`,
+            total: `0 Go`
+        };
+    }
 };
