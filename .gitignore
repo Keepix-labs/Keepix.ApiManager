@@ -40,3 +40,4 @@ lerna-debug.log*
 
 # useless
 .wap-config
+data/
