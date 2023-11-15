@@ -65,7 +65,7 @@ export class WalletsController {
     @ApiOperation({ summary: 'Get the secret data of one wallet (Used for installation of plugins).' })
     async getSecretKey(@Param('address') address: string) {
         if (!address || address.length == 0) {
-            return undefined;
+            return false;
         }
         return this.walletStorageService.getWalletByAddress(address);
     }
@@ -94,6 +94,32 @@ export class WalletsController {
             await this.walletsService.getTokensBalance(wallet, true);
         }
         return wallet;
+    }
+
+    @ApiBody({ type: Object })
+    @Post('import-token')
+    @ApiOperation({ summary: 'Import token to a wallet.' })
+    async importToken(@Body() body: any) {
+        let wallet = this.walletStorageService.getWallet(body.type, body.address);
+        if (wallet != undefined) {
+            if (wallet.tokens === undefined) {
+                wallet.tokens = [];
+            }
+
+            const tokenSymbol = await this.walletsService.getTokenSymbol(body.contractAddress, wallet.type);
+
+            if (tokenSymbol === undefined || tokenSymbol === '') {
+                return { success: false, description: 'Invalid Token Address.' };
+            }
+            wallet.tokens.push({
+                name: tokenSymbol,
+                contractAddress: body.contractAddress,
+            });
+            this.walletStorageService.save();
+            await this.walletsService.getTokensBalance(wallet, true);
+            return { success: true, description: 'Added' };
+        }
+        return { success: false, description: 'Wallet not found.' };
     }
 
     @ApiBody({ type: Object })

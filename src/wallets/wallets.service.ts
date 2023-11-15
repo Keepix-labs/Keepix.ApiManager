@@ -123,26 +123,35 @@ export class WalletsService {
             wallet.tokens = [];
         }
         if (wallet.type == 'ethereum' || wallet.type == 'arbitrum') {
-            const whiteListTokens = [
+            const baseListOfTokens = [
                 {
                     name: 'RPL',
                     contractAddress: '0xd33526068d116ce69f19a9ee46f0bd304f21a51f',
                     pair: '0xe42318ea3b998e8355a3da364eb9d48ec725eb45',
                     icon: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2943.png'
                 }
+            ].filter(x => !wallet.tokens.find(t => t.contractAddress === x.contractAddress));
+
+            const listOfTokens = [
+                ... baseListOfTokens,
+                ... wallet.tokens
             ];
-            for (let token of whiteListTokens) {
+
+            for (let token of listOfTokens) {
                 const balanceOfTheWallet = await this.getTokenBalanceOfAndFormatToUnit(token.contractAddress, wallet.address, wallet.type);
-                const tokenPriceInETH = await this.getTokenPriceOutFromPoolBalance(token.contractAddress, 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, token.pair, wallet.type);
-                const tokenPriceInUsd = tokenPriceInETH * this.ETHPrice;
-                const balance = (Number(balanceOfTheWallet).toFixed(8));
-                const balanceInUsd = (Number(balance) * tokenPriceInUsd).toFixed(2);
+                let balanceInUsd = '0';
+                let balance = (Number(balanceOfTheWallet).toFixed(8));
+
+                if (token.pair != undefined) { // get the price
+                    const tokenPriceInETH = await this.getTokenPriceOutFromPoolBalance(token.contractAddress, 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, token.pair, wallet.type);
+                    const tokenPriceInUsd = tokenPriceInETH * this.ETHPrice;
+                    balanceInUsd = (Number(balance) * tokenPriceInUsd).toFixed(2);
+                }
 
                 let tokenDataFromWalletArray = wallet.tokens.find(x => x.contractAddress === token.contractAddress);
                 if (tokenDataFromWalletArray !== undefined) {
                     tokenDataFromWalletArray.balance = balance;
                     tokenDataFromWalletArray.usd = balanceInUsd;
-                    tokenDataFromWalletArray.icon = token.icon;
                 } else {
                     wallet.tokens.push({
                         ... token,
@@ -254,6 +263,20 @@ export class WalletsService {
             return importWalletViaPrivateKeyFunctions[walletType](data);
         }
         return false;
+    }
+
+    public async isValidToken(tokenAddress, type) {
+        try {
+            return (await this.getTokenContract(tokenAddress, type).totalSupply()) > 0;
+        } catch (e) { }
+        return false;
+    }
+
+    public async getTokenSymbol(tokenAddress, type) {
+        try {
+            return (await this.getTokenContract(tokenAddress, type).symbol());
+        } catch (e) { }
+        return undefined;
     }
 
     private async getTokenPriceOutFromPoolBalance(_in, _in_units, _out, _out_units, _pair, type) {
