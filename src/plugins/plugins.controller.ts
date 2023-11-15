@@ -24,7 +24,7 @@ export class PluginsController {
     }
 
     @ApiQuery({ name: 'only-installed', type: 'boolean', required: false })
-    @ApiOperation({ summary: 'Return the internal list of plugins.' })
+    @ApiOperation({ summary: 'Return the internal installed list of plugins.' })
     @Get('list')
     async list(@Query('only-installed') onlyInstalled: boolean = false) {
         return this.propertiesService.getProperty('plugins', [])
@@ -43,7 +43,7 @@ export class PluginsController {
         const taskId = `${pluginId}-install`;
 
         if (this.runningTasks[taskId] != undefined && this.runningTasks[taskId].status == 'INSTALLING') {
-            return { error: 'Installation Already In progress' };
+            return { error: 'Installation already in progress' };
         }
 
         this.runningTasks[taskId] = {
@@ -63,7 +63,7 @@ export class PluginsController {
             if (plugin.installed == true) {
                 this.runningTasks[taskId] = {
                     status: 'ERROR',
-                    description: 'Plugin already Installed.'
+                    description: 'Plugin already installed.'
                 };
                 return ;
             }
@@ -92,7 +92,7 @@ export class PluginsController {
             
             this.runningTasks[taskId] = {
                 status: 'INSTALLING',
-                description: 'Running Installation Plugin.'
+                description: 'Running plugin installation.'
             };
 
             this.runCommandToPlugin(pluginId, {
@@ -104,7 +104,7 @@ export class PluginsController {
                     this.propertiesService.save();
                     this.runningTasks[taskId] = {
                         status: 'FINISHED',
-                        description: 'Installed with Success.'
+                        description: 'Installed successfully.'
                     };
                 } else {
                     this.runningTasks[taskId] = {
@@ -156,7 +156,7 @@ export class PluginsController {
                 this.propertiesService.save();
                 this.runningTasks[taskId] = {
                     status: 'FINISHED',
-                    description: 'Uninstalled with Success.'
+                    description: 'Uninstalled succesfully.'
                 };
             } else {
                 this.runningTasks[taskId] = {
@@ -180,7 +180,7 @@ export class PluginsController {
         @Query('version') version: string = "latest") {
         const taskId = `${pluginId}-update`;
         if (this.runningTasks[taskId] != undefined && this.runningTasks[taskId].status == 'INSTALLING') {
-            return { error: 'Update Already In progress' };
+            return { error: 'Update already in progress' };
         }
 
         this.runningTasks[taskId] = {
@@ -200,7 +200,7 @@ export class PluginsController {
             if (!plugin.installed) {
                 this.runningTasks[taskId] = {
                     status: 'ERROR',
-                    description: 'Plugin Not Installed.'
+                    description: 'Plugin not installed.'
                 };
                 return ;
             }
@@ -224,10 +224,10 @@ export class PluginsController {
             
             this.runningTasks[taskId] = {
                 status: 'FINISHED',
-                description: 'Updated with Success.'
+                description: 'Updated successfully'
             };
         })).then(() => {
-            console.log('Update Finished');
+            console.log('Update finished');
         });
         return { taskId: taskId };
     }
@@ -242,7 +242,7 @@ export class PluginsController {
     @ApiQuery({ name: 'async', type: 'string', required: false })
     @ApiParam({ name: 'key', type: 'string' })
     @ApiParam({ name: 'pluginId', type: 'string' })
-    @ApiOperation({ summary: 'For get plugin information with "key" function.' })
+    @ApiOperation({ summary: 'To get plugin information with "key" function.' })
     @Get(':pluginId/:key')
     async runGetCommandToPlugin(
         @Param('pluginId') pluginId,
@@ -258,7 +258,7 @@ export class PluginsController {
     @ApiParam({ name: 'key', type: 'string' })
     @ApiParam({ name: 'pluginId', type: 'string' })
     @ApiBody({ type: Object })
-    @ApiOperation({ summary: 'For push plugin action with "key" function and body data.' })
+    @ApiOperation({ summary: 'To push plugin action with "key" function and body data.' })
     @Post(':pluginId/:key')
     async runPostCommandToPlugin(
         @Param('pluginId') pluginId,
@@ -281,7 +281,7 @@ export class PluginsController {
                 return {
                     taskId: taskId,
                     aborted: true,
-                    reason: "Already Running"
+                    reason: "Already running"
                 };
             }
 
