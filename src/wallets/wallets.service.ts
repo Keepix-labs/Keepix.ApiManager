@@ -265,6 +265,38 @@ export class WalletsService {
         return false;
     }
 
+    public async sendCoinTo(wallet, receiverAddress, amountInEther) {
+        if (wallet.type === 'bitcoin') {
+            return { success: false, description: 'Transfer Not Managed.' };
+        }
+        if (wallet.type === 'ethereum') {
+            const provider = this.getProvider(wallet.type);
+            const walletObj = new ethers.Wallet(wallet.privateKey, provider);
+
+            let tx = {
+                to: receiverAddress,
+                // Convert currency unit from ether to wei
+                value: ethers.utils.parseEther(amountInEther)
+            }
+
+            const transactionRequest: any = await new Promise((resolve) => {
+                walletObj.sendTransaction(tx).then((txObj) => {
+                    console.log('txHash', txObj.hash)
+                    resolve({ tx: txObj });
+                }).catch((e) => {
+                    resolve({ tx: undefined, error: e.message });
+                });
+            });
+
+            if (transactionRequest.tx !== undefined) {
+                return { success: true, description: `${transactionRequest.tx.hash}` };
+            } else {
+                return { success: false, description: transactionRequest.error };
+            }
+        }
+        return { success: false, description: 'Transfer Not Managed.' };
+    }
+
     public async isValidToken(tokenAddress, type) {
         try {
             return (await this.getTokenContract(tokenAddress, type).totalSupply()) > 0;

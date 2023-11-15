@@ -97,6 +97,27 @@ export class WalletsController {
     }
 
     @ApiBody({ type: Object })
+    @Post('send')
+    @ApiOperation({ summary: 'Send token or native token to an address.' })
+    async send(@Body() body: any) {
+        let wallet = this.walletStorageService.getWallet(body.type, body.address);
+        if (wallet != undefined) {
+            if (body.name === wallet.nativeCoinName) {
+                // native send
+                return await this.walletsService.sendCoinTo(wallet, body.to, body.amount);
+            } else {
+                const token = wallet.tokens?.find(x => x.name === body.name);
+
+                if (token !== undefined) {
+                    // token send
+                }
+            }
+            return { success: false, description: 'Token or coin not found.' };
+        }
+        return { success: false, description: 'Wallet not found.' };
+    }
+
+    @ApiBody({ type: Object })
     @Post('import-token')
     @ApiOperation({ summary: 'Import token to a wallet.' })
     async importToken(@Body() body: any) {
