@@ -53,5 +53,10 @@ export const environment = {
         'win': path.join(appDataPath, 'properties.json'),
         'osx': path.join(appDataPath, 'properties.json'),
         'linux': path.join(appDataPath, 'properties.json')
+    },
+    walletsFilePath: {
+        'win': path.join(appDataPath, 'wallets.json'),
+        'osx': path.join(appDataPath, 'wallets.json'),
+        'linux': path.join(appDataPath, 'wallets.json')
     }
 };

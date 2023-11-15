@@ -31,8 +31,31 @@ export class AnalyticsService extends PropertiesStorage {
         return this.propertiesMap;
     }
 
+    public putAnalytic(key: string, data: any) {
+        if (this.propertiesMap[key] === undefined) {
+            this.propertiesMap[key] = [];
+        }
+        this.propertiesMap[key].push(data);
+    }
+
+    public putAnalyticWithLimitOfLength(key: string, data: any, limit: number) {
+        if (this.propertiesMap[key] === undefined) {
+            this.propertiesMap[key] = [];
+        }
+        this.propertiesMap[key] = this.propertiesMap[key].slice(-(limit));
+        this.propertiesMap[key].push(data);
+    }
+
+    public getAnalytic(key: string) {
+        return this.propertiesMap[key] ?? [];
+    }
+
     public load() {
         this.loadProperties();
         this.loggerService.log(`(${Object.keys(this.propertiesMap).length}) Analytics Loaded`);
+    }
+
+    public save() {
+        this.saveProperties();
     }
 }

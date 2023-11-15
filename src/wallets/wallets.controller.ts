@@ -1,92 +1,99 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ethers } from 'ethers';
 import { PropertiesService } from 'src/shared/storage/properties.service';
-import * as bitcore from 'bitcore-lib';
 import fetch from 'node-fetch';
+import { WalletsService } from './wallets.service';
+import { WalletStorageService } from 'src/shared/storage/wallet-storage.service';
+import { AnalyticsService } from 'src/shared/storage/analytics.service';
 
 @ApiTags('Wallets')
 @Controller('wallets')
 export class WalletsController {
 
-    constructor(private propertiesService: PropertiesService) {}
+    constructor(
+        private walletStorageService: WalletStorageService,
+        private walletsService: WalletsService,
+        private analyticsService: AnalyticsService) {}
 
+    @ApiQuery({ name: 'hide-secret-data', type: 'string', required: false })
     @Get('')
     @ApiOperation({ summary: 'Get the list of wallets' })
-    async get() {
-        let walletsCopy = [ ... this.propertiesService.getProperty('wallets', []) ];
+    async get(@Query('hide-secret-data') hiddenSecret: string = 'true') {
+        let wallets = this.walletStorageService.getWallets();
+        let walletsCopy = [];
 
-        for (let i = 0; i < walletsCopy.length; i++) {
-            let wallet = walletsCopy[i];
+        for (let i = 0; i < wallets.length; i++) {
+            let wallet = wallets[i];
 
-            if (wallet.privateKey != undefined) {
-                delete wallet.privateKey;
-            }
-            if (wallet.mnemonic != undefined) {
-                delete wallet.mnemonic;
-            }
-
-            // recuperer les balances
             if (wallet.type == 'bitcoin') {
-                const resultOfBalance = (await (await fetch(`https://blockchain.info/balance?active=${wallet.address}`)).json());
-                const balance = resultOfBalance[wallet.address]?.final_balance ?? 0;
-
-                wallet.balance = `${(balance / 100000000).toFixed(8)} BTC`;
                 wallet.icon = 'logos:bitcoin';
+                wallet.nativeCoinName = 'BTC';
             }
+            if (wallet.type == 'ethereum') {
+                wallet.icon = 'logos:ethereum';
+                wallet.nativeCoinName = 'ETH';
+            }
+            if (wallet.type == 'bsc') {
+                wallet.icon = 'mingcute:binance-coin-bnb-fill';
+                wallet.nativeCoinName = 'BNB';
+            }
+            if (wallet.type == 'avalanche') {
+                wallet.icon = 'cryptocurrency-color:avax';
+                wallet.nativeCoinName = 'AVAX';
+            }
+            if (wallet.type == 'arbitrum') {
+                wallet.icon = 'https://checkdot.io/assets/chains/ARB.png';
+                wallet.nativeCoinName = 'ETH';
+            }
+
+            await this.walletsService.getNativeBalance(wallet);
+            await this.walletsService.getTokensBalance(wallet);
+
+            walletsCopy.push({
+                ... wallet,
+                privateKey: hiddenSecret === 'true' ? undefined : wallet.privateKey,
+                mnemonic: hiddenSecret === 'true' ? undefined : wallet.mnemonic,
+                analytics: this.analyticsService.getAnalytic(this.walletsService.getWalletAnalyticKey(wallet))
+            });
         }
         return walletsCopy;
+    }
+
+    @ApiParam({ name: 'address', type: 'string' })
+    @Get('secret-data/:address')
+    @ApiOperation({ summary: 'Get the secret data of one wallet (Used for installation of plugins).' })
+    async getSecretKey(@Param('address') address: string) {
+        if (!address || address.length == 0) {
+            return undefined;
+        }
+        return this.walletStorageService.getWalletByAddress(address);
     }
 
     @ApiBody({ type: Object })
     @Post('new')
     @ApiOperation({ summary: 'Create new wallet.' })
     async new(@Body() body: any) {
+        return this.walletsService.generateNewWallet(body.type, body);
+    }
 
-        const generativeWalletFunctions = {
-            'evm': (options) => {
-                const wallets = this.propertiesService.getProperty('wallets', []);
-                const hdnode = require('@ethersproject/hdnode');  
-                const mnemonic = hdnode.entropyToMnemonic(ethers.randomBytes(32));
-                const wallet = ethers.Wallet.fromPhrase(mnemonic);
-                this.propertiesService.setProperty('wallets', [
-                    ... wallets,
-                    {
-                        type: 'evm',
-                        mnemonic: wallet.mnemonic.phrase,
-                        address: wallet.address,
-                        privateKey: wallet.privateKey
-                    }
-                ]);
-                this.propertiesService.save();
-                return this.propertiesService.getProperty('wallets');
-            },
-            'bitcoin': (options) => {
-                const privateKey = new bitcore.PrivateKey();
-                const wallets = this.propertiesService.getProperty('wallets', []);
-                this.propertiesService.setProperty('wallets', [
-                    ... wallets,
-                    {
-                        type: 'bitcoin',
-                        address: privateKey.toAddress().toString(),
-                        privateKey: privateKey.toObject()
-                    }
-                ]);
-                this.propertiesService.save();
-                return this.propertiesService.getProperty('wallets');
-            }
-        };
+    @ApiBody({ type: Object })
+    @Post('import')
+    @ApiOperation({ summary: 'Import existing wallet.' })
+    async import(@Body() body: any) {
+        return this.walletsService.importExistingWallet(body.type, body);
+    }
 
-        console.log(body);
-
-        if (generativeWalletFunctions[body.type] == undefined) {
-            return {
-                success: false,
-                description: 'Type not found.'
-            };
+    @ApiBody({ type: Object })
+    @Post('refresh')
+    @ApiOperation({ summary: 'Refresh balance of a wallet.' })
+    async refresh(@Body() body: any) {
+        let wallet = this.walletStorageService.getWallet(body.type, body.address);
+        if (wallet != undefined) {
+            await this.walletsService.getNativeBalance(wallet, true);
+            await this.walletsService.getTokensBalance(wallet, true);
         }
-
-        return generativeWalletFunctions[body.type](body);
+        return wallet;
     }
 
     @ApiBody({ type: Object })
@@ -101,8 +108,7 @@ export class WalletsController {
             };
         }
 
-        let wallets = this.propertiesService.getProperty('wallets', []);
-        let targetWallet = wallets.find(x => x.address === body.address);
+        let targetWallet = this.walletStorageService.getWalletByAddress(body.address);
         if (targetWallet == undefined) {
             return {
                 success: false,
@@ -110,7 +116,7 @@ export class WalletsController {
             };
         }
         targetWallet.deleted = true;
-        this.propertiesService.save();
+        this.walletStorageService.save();
         return {
             success: true,
             description: `Wallet ${body.address} deleted.`

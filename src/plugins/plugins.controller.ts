@@ -239,7 +239,7 @@ export class PluginsController {
         return this.pluginsService.plugins[pluginId] != undefined;
     }
 
-    @ApiQuery({ name: 'async', type: 'boolean', required: false })
+    @ApiQuery({ name: 'async', type: 'string', required: false })
     @ApiParam({ name: 'key', type: 'string' })
     @ApiParam({ name: 'pluginId', type: 'string' })
     @ApiOperation({ summary: 'For get plugin information with "key" function.' })
@@ -247,14 +247,14 @@ export class PluginsController {
     async runGetCommandToPlugin(
         @Param('pluginId') pluginId,
         @Param('key') key,
-        @Query('async') isAsync: boolean = false) {
+        @Query('async') isAsync: string = 'false') {
         const dto = {
             key: key
         };
-        return await this.runCommandToPlugin(pluginId, dto, isAsync);
+        return await this.runCommandToPlugin(pluginId, dto, isAsync === 'true');
     }
 
-    @ApiQuery({ name: 'async', type: 'boolean', required: false })
+    @ApiQuery({ name: 'async', type: 'string', required: false })
     @ApiParam({ name: 'key', type: 'string' })
     @ApiParam({ name: 'pluginId', type: 'string' })
     @ApiBody({ type: Object })
@@ -263,13 +263,13 @@ export class PluginsController {
     async runPostCommandToPlugin(
         @Param('pluginId') pluginId,
         @Param('key') key,
-        @Query('async') isAsync: boolean = false,
+        @Query('async') isAsync: string = 'false',
         @Body() body: any) {
         const dto = {
             key: key,
             ... body
         };
-        return await this.runCommandToPlugin(pluginId, dto, isAsync);
+        return await this.runCommandToPlugin(pluginId, dto, isAsync === 'true');
     }
 
     private async runCommandToPlugin(pluginId: string, dto: any, isAsync: boolean = false) {

@@ -12,6 +12,7 @@ import { PluginsService } from './plugins/plugins.service';
 import { environment } from './environment';
 import path from 'path';
 import { BindService } from './shared/bind.service';
+import { WalletsService } from './wallets/wallets.service';
 
 @Injectable()
 export class ApiService {
@@ -24,12 +25,14 @@ export class ApiService {
         private bashService: BashService,
         private bindService: BindService,
         private firstLoadService: FirstLoadService,
-        private pluginsService: PluginsService) {
+        private pluginsService: PluginsService,
+        private walletService: WalletsService) {
     }
 
     schedule() {
         this.loggerService.log(`${this.title} Start`);
         this.bindService.addScheduler(schedule.scheduleJob('*/10 * * * *' /* 10min */, () => this.runEach10Minutes()));
+        this.bindService.addScheduler(schedule.scheduleJob('0 * * * *' /* 1 hour (at minute 0) */, () => this.runEach1Hour()));
         this.bindService.addInterval(setInterval(() => {
             this.runEach10Seconds();
         }, 1000 * 10)); // 10 sec
@@ -54,6 +57,11 @@ export class ApiService {
     async runEach10Minutes() {
         this.loggerService.log(`${this.title} (10min) Run`);
         await this.pluginsService.run();
+    }
+
+    async runEach1Hour() {
+        this.loggerService.log(`${this.title} (1min) Run`);
+        await this.walletService.run();
     }
 
     public async getLatestVersionOfApi() {

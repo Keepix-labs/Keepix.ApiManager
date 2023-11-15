@@ -18,6 +18,7 @@ import * as keepixSsh from 'keepix-ssh';
 import path from 'path';
 import url from 'url';
 import { BindService } from './shared/bind.service';
+import { WalletStorageService } from './shared/storage/wallet-storage.service';
 
 async function bootstrap() {
 
@@ -92,6 +93,7 @@ async function bootstrap() {
   app.get(LoggerService).log(`------------------- Loaders ----------------------`);
   app.get(PropertiesService).load();
   app.get(AnalyticsService).load();
+  app.get(WalletStorageService).load();
 
   // Setup default keepix name
   if (app.get(PropertiesService).getProperty('keepix-name') == undefined) {

@@ -1,6 +1,6 @@
 {
     "name": "keepix-server-build",
-    "version": "0.0.128",
+    "version": "0.0.130",
     "description": "simple CLI for manage keepix repositories",
     "main": "run.js",
     "bin": {
@@ -27,12 +27,12 @@
         "cors": "^2.8.5",
         "decompress": "^4.2.1",
         "decompress-targz": "^4.1.1",
-        "ethers": "^6.7.1",
+        "ethers": "^5.1.4",
         "express": "^4.18.2",
         "http": "^0.0.1-security",
         "https": "^1.0.0",
         "increase-build-package-public-directory": "^0.0.3",
-        "keepix-application-interface-build": "^0.0.15",
+        "keepix-application-interface-build": "^0.0.16",
         "keepix-ssh": "^0.4.22",
         "moment": "^2.29.4",
         "node-fetch": "^2.7.0",
