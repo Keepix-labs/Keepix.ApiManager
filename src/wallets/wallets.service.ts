@@ -14,11 +14,8 @@ export class WalletsService {
 
     private title: string = "Keepix-Wallets-Service";
 
-    private ETHPrice = 0;
-    private BNBPrice = 0;
-    private BTCPrice = 0;
-    private AVAXPrice = 0;
-    private lastLoadImportantPriceTime = 0;
+    private importantPrices = {};
+    private lastLoadImportantPriceTime = {};
 
     constructor(
         private loggerService: LoggerService,
@@ -48,6 +45,17 @@ export class WalletsService {
         return `${wallet.type}-${wallet.address}`;
     }
 
+    public getListOfTypes() {
+        return [
+            'bitcoin',
+            'ethereum',
+            'bsc',
+            'avalanche',
+            'arbitrum',
+            'polygon'
+        ];
+    }
+
     public async getNativeBalance(wallet: any, force: boolean = false) {
         // 10 min of caching
         if (force === false
@@ -57,17 +65,18 @@ export class WalletsService {
         }
         wallet.lastLoadNativePriceTime = (new Date()).getTime();
 
-        // load important tokens Price
-        await this.loadImportantTokensPrices();
-
         if (wallet.type == 'bitcoin') {
+            await this.loadImportantTokenPrice('BTC');
+
             const resultOfBalance = (await (await fetch(`https://blockchain.info/balance?active=${wallet.address}`)).json());
             const balance = resultOfBalance[wallet.address]?.final_balance ?? 0;
             wallet.balance = (balance / 100000000).toFixed(8);
-            wallet.usd = (Number(wallet.balance) * this.BTCPrice).toFixed(2);
+            wallet.usd = (Number(wallet.balance) * this.importantPrices['BTC']).toFixed(2);
             return ;
         }
         if (wallet.type == 'ethereum' || wallet.type == 'arbitrum') {
+            await this.loadImportantTokenPrice('ETH');
+
             const provider = this.getProvider(wallet.type);
             const balance = await new Promise(async (resolve) => {
                 provider.getBalance(wallet.address).then((balance) => {
@@ -76,10 +85,12 @@ export class WalletsService {
                 }).catch(() => resolve('0'));
             });
             wallet.balance = (Number(balance).toFixed(8));
-            wallet.usd = (Number(wallet.balance) * this.ETHPrice).toFixed(2);
+            wallet.usd = (Number(wallet.balance) * this.importantPrices['ETH']).toFixed(2);
             return ;
         }
         if (wallet.type == 'bsc') {
+            await this.loadImportantTokenPrice('BNB');
+
             const provider = this.getProvider(wallet.type);
             const balance = await new Promise(async (resolve) => {
                 provider.getBalance(wallet.address).then((balance) => {
@@ -88,10 +99,12 @@ export class WalletsService {
                 }).catch(() => resolve('0'));
             });
             wallet.balance = (Number(balance).toFixed(8));
-            wallet.usd = (Number(wallet.balance) * this.BNBPrice).toFixed(2);
+            wallet.usd = (Number(wallet.balance) * this.importantPrices['BNB']).toFixed(2);
             return ;
         }
         if (wallet.type == 'avalanche') {
+            await this.loadImportantTokenPrice('AVAX');
+
             const provider = this.getProvider(wallet.type);
             const balance = await new Promise(async (resolve) => {
                 provider.getBalance(wallet.address).then((balance) => {
@@ -100,7 +113,21 @@ export class WalletsService {
                 }).catch(() => resolve('0'));
             });
             wallet.balance = (Number(balance).toFixed(8));
-            wallet.usd = (Number(wallet.balance) * this.AVAXPrice).toFixed(2);
+            wallet.usd = (Number(wallet.balance) * this.importantPrices['AVAX']).toFixed(2);
+            return ;
+        }
+        if (wallet.type == 'polygon') {
+            await this.loadImportantTokenPrice('MATIC');
+
+            const provider = this.getProvider(wallet.type);
+            const balance = await new Promise(async (resolve) => {
+                provider.getBalance(wallet.address).then((balance) => {
+                    const balanceInEth = ethers.utils.formatEther(balance);
+                    resolve(balanceInEth);
+                }).catch(() => resolve('0'));
+            });
+            wallet.balance = (Number(balance).toFixed(8));
+            wallet.usd = (Number(wallet.balance) * this.importantPrices['MATIC']).toFixed(2);
             return ;
         }
         wallet.balance = '0';
@@ -116,13 +143,13 @@ export class WalletsService {
         }
         wallet.lastLoadTokenPriceTime = (new Date()).getTime();
 
-        // load important tokens Price
-        await this.loadImportantTokensPrices();
         // setup tokens
         if (wallet.tokens === undefined) {
             wallet.tokens = [];
         }
         if (wallet.type == 'ethereum' || wallet.type == 'arbitrum') {
+            await this.loadImportantTokenPrice('ETH');
+
             const baseListOfTokens = [
                 {
                     name: 'RPL',
@@ -144,7 +171,7 @@ export class WalletsService {
 
                 if (token.pair != undefined) { // get the price
                     const tokenPriceInETH = await this.getTokenPriceOutFromPoolBalance(token.contractAddress, 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, token.pair, wallet.type);
-                    const tokenPriceInUsd = tokenPriceInETH * this.ETHPrice;
+                    const tokenPriceInUsd = tokenPriceInETH * this.importantPrices['ETH'];
                     balanceInUsd = (Number(balance) * tokenPriceInUsd).toFixed(2);
                 }
 
@@ -169,6 +196,9 @@ export class WalletsService {
             return ;
         }
         if (wallet.type == 'avalanche') {
+            return ;
+        }
+        if (wallet.type == 'polygon') {
             return ;
         }
         return ;
@@ -196,6 +226,7 @@ export class WalletsService {
             'bsc': (options) => generateEvmWallet({ ... options, type: 'bsc' }),
             'avalanche': (options) => generateEvmWallet({ ... options, type: 'avalanche' }),
             'arbitrum': (options) => generateEvmWallet({ ... options, type: 'arbitrum' }),
+            'polygon': (options) => generateEvmWallet({ ... options, type: 'polygon' }),
             'bitcoin': (options) => {
                 const privateKey = new bitcore.PrivateKey();
                 const walletData = {
@@ -251,7 +282,8 @@ export class WalletsService {
                 'ethereum': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'ethereum' }),
                 'bsc': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'bsc' }),
                 'avalanche': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'avalanche' }),
-                'arbitrum': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'arbitrum' })
+                'arbitrum': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'arbitrum' }),
+                'polygon': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'polygon' })
             };
 
             if (importWalletViaPrivateKeyFunctions[walletType] == undefined) {
@@ -327,38 +359,63 @@ export class WalletsService {
         return Number(integerBalanceOUT) / Number(integerBalanceIN);
     };
 
-    private async loadImportantTokensPrices() {
-        if (moment(this.lastLoadImportantPriceTime).isAfter(moment().subtract(1, 'hour'))) {
+    private async loadImportantTokenPrice(symbol: string) {
+        if (this.lastLoadImportantPriceTime[symbol] !== undefined && moment(this.lastLoadImportantPriceTime[symbol]).isAfter(moment().subtract(1, 'hour'))) {
             // keep current values for an hour
             return ;
         }
 
-        this.ETHPrice = await this.getTokenPriceOutFromPoolBalance(
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // in (WETH)
-            '0x6B175474E89094C44Da98b954EedeAC495271d0F', 18, // out (DAI) Important Only 18 decimals!
-            '0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11', // DAI/WETH uniswap v2 Pair
-            'ethereum' // ethereum Chain
-        );
-        this.BNBPrice = await this.getTokenPriceOutFromPoolBalance(
-            '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, // in (WBNB)
-            '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', 18, // out (BUSD) Important Only 18 decimals!
-            '0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16', // Pair
-            'bsc' // bsc Chain
-        );
-        this.BTCPrice = (await this.getTokenPriceOutFromPoolBalance(
-            '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', 8, // in (WBTC)
-            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // out (WETH) Important Only 18 decimals!
-            '0xceff51756c56ceffca006cd410b03ffc46dd3a58', // WBTC/WETH uniswap v2 Pair
-            'ethereum' // ethereum Chain
-        )) * this.ETHPrice;
-        this.AVAXPrice = (await this.getTokenPriceOutFromPoolBalance(
-            '0x1ce0c2827e2ef14d5c4f29a091d735a204794041', 18, // in (AVAX)
-            '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, // out (WBNB) Important Only 18 decimals!
-            '0x151268db1579ebc5306d4aaa5dcc627646e6986f', // WBNB/AVAX uniswap v2 Pair
-            'bsc' // bsc Chain
-        )) * this.BNBPrice;
-        this.lastLoadImportantPriceTime = (new Date()).getTime();
-        this.loggerService.log(`ETH=${this.ETHPrice}, BNB=${this.BNBPrice}, BTC=${this.BTCPrice}, AVAX=${this.AVAXPrice}`);
+        if (symbol === 'ETH') {
+            this.importantPrices[symbol] = await this.getTokenPriceOutFromPoolBalance(
+                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // in (WETH)
+                '0x6B175474E89094C44Da98b954EedeAC495271d0F', 18, // out (DAI) Important Only 18 decimals!
+                '0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11', // DAI/WETH uniswap v2 Pair
+                'ethereum' // ethereum Chain
+            );
+        }
+        if (symbol === 'BNB') {
+            this.importantPrices[symbol] = await this.getTokenPriceOutFromPoolBalance(
+                '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, // in (WBNB)
+                '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', 18, // out (BUSD) Important Only 18 decimals!
+                '0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16', // Pair
+                'bsc' // bsc Chain
+            );
+        }
+        if (symbol === 'BTC') {
+            if (this.importantPrices['ETH'] === undefined) {
+                await this.loadImportantTokenPrice('ETH');
+            }
+            this.importantPrices[symbol] = (await this.getTokenPriceOutFromPoolBalance(
+                '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', 8, // in (WBTC)
+                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // out (WETH) Important Only 18 decimals!
+                '0xceff51756c56ceffca006cd410b03ffc46dd3a58', // WBTC/WETH uniswap v2 Pair
+                'ethereum' // ethereum Chain
+            )) * this.importantPrices['ETH'];
+        }
+        if (symbol === 'AVAX') {
+            if (this.importantPrices['BNB'] === undefined) {
+                await this.loadImportantTokenPrice('BNB');
+            }
+            this.importantPrices[symbol] = (await this.getTokenPriceOutFromPoolBalance(
+                '0x1ce0c2827e2ef14d5c4f29a091d735a204794041', 18, // in (AVAX)
+                '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, // out (WBNB) Important Only 18 decimals!
+                '0x151268db1579ebc5306d4aaa5dcc627646e6986f', // WBNB/AVAX uniswap v2 Pair
+                'bsc' // bsc Chain
+            )) * this.importantPrices['BNB'];
+        }
+        if (symbol === 'MATIC') {
+            if (this.importantPrices['ETH'] === undefined) {
+                await this.loadImportantTokenPrice('ETH');
+            }
+            this.importantPrices[symbol] = (await this.getTokenPriceOutFromPoolBalance(
+                '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0', 18, // in (MATIC)
+                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // out (WETH) Important Only 18 decimals!
+                '0x819f3450da6f110ba6ea52195b3beafa246062de', // WETH/MATIC uniswap v2 Pair
+                'ethereum' // ethereum Chain
+            )) * this.importantPrices['ETH'];
+        }
+        this.lastLoadImportantPriceTime[symbol] = (new Date()).getTime();
+        this.loggerService.log(`${symbol}=${this.importantPrices[symbol]}`);
     }
 
     private getTokenContract(tokenAddress, type) {

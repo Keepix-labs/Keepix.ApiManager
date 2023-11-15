@@ -108,9 +108,11 @@ export class PluginsController {
                     };
                 } else {
                     this.runningTasks[taskId] = {
-                        status: 'Error',
+                        status: 'ERROR',
                         description: resultOfExec.stdOut
                     };
+                    plugin.installed = false;
+                    this.propertiesService.save();
                 }
             });
         })).then(() => {
@@ -160,7 +162,7 @@ export class PluginsController {
                 };
             } else {
                 this.runningTasks[taskId] = {
-                    status: 'Error',
+                    status: 'ERROR',
                     description: resultOfExec.stdOut
                 };
             }

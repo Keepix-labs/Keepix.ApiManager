@@ -16,6 +16,12 @@ export class WalletsController {
         private walletsService: WalletsService,
         private analyticsService: AnalyticsService) {}
 
+    @Get('types')
+    @ApiOperation({ summary: 'Get the list of wallet types managed.' })
+    async getTypes() {
+        return this.walletsService.getListOfTypes();
+    }
+
     @ApiQuery({ name: 'hide-secret-data', type: 'string', required: false })
     @Get('')
     @ApiOperation({ summary: 'Get the list of wallets' })
