@@ -111,6 +111,9 @@ export class WalletsController {
             if (tokenSymbol === undefined || tokenSymbol === '') {
                 return { success: false, description: 'Invalid Token Address.' };
             }
+            if (wallet.tokens.find(x => x.contractAddress.toUpperCase() === body.contractAddress.toUpperCase())) {
+                return { success: false, description: 'Already Present.' };
+            }
             wallet.tokens.push({
                 name: tokenSymbol,
                 contractAddress: body.contractAddress,
