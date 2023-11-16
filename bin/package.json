@@ -1,6 +1,6 @@
 {
     "name": "keepix-server-build",
-    "version": "0.0.138",
+    "version": "0.0.139",
     "description": "simple CLI for manage keepix repositories",
     "main": "run.js",
     "bin": {
@@ -32,7 +32,7 @@
         "http": "^0.0.1-security",
         "https": "^1.0.0",
         "increase-build-package-public-directory": "^0.0.3",
-        "keepix-application-interface-build": "^0.0.22",
+        "keepix-application-interface-build": "^0.0.23",
         "keepix-ssh": "^0.4.22",
         "keepix-tokens": "^0.0.6",
         "moment": "^2.29.4",
