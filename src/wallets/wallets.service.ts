@@ -74,6 +74,14 @@ export class WalletsService {
                     const balance = eval(new Function("v", `with (v) { return (${coin.getBalanceByQuery.resultEval.replace(/\$address/gm, wallet.address)})}`)({ result: resultOfBalance })) ?? 0;
 
                     wallet.balance = (balance / 100000000).toFixed(8);
+                } else if (coin.getBalanceByQuery.method === 'POST') {
+                    const resultOfBalance = (await (await fetch(coin.getBalanceByQuery.url.replace(/\$address/gm, wallet.address), {
+                        method: 'POST',
+                        body: typeof coin.getBalanceByQuery.body === 'string' ? coin.getBalanceByQuery.body : JSON.stringify(coin.getBalanceByQuery.body).replace(/\$address/gm, wallet.address)
+                    })).json());
+                    const balance = eval(new Function("v", `with (v) { return (${coin.getBalanceByQuery.resultEval.replace(/\$address/gm, wallet.address)})}`)({ result: resultOfBalance })) ?? 0;
+
+                    wallet.balance = (balance / 100000000).toFixed(8);
                 }
             } catch (e) {
                 console.error(e);
