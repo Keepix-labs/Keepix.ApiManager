@@ -71,7 +71,7 @@ export class WalletsService {
             try {
                 if (coin.getBalanceByQuery.method === 'GET') {
                     const resultOfBalance = (await (await fetch(coin.getBalanceByQuery.url.replace(/\$address/gm, wallet.address))).json());
-                    const balance = eval(new Function("v", `with (v) { return (${coin.getBalanceByQuery.resultEval})}`)(resultOfBalance)) ?? 0;
+                    const balance = eval(new Function("v", `with (v) { return (${coin.getBalanceByQuery.resultEval.replace(/\$address/gm, wallet.address)})}`)({ result: resultOfBalance })) ?? 0;
 
                     wallet.balance = (balance / 100000000).toFixed(8);
                 }
@@ -96,10 +96,11 @@ export class WalletsService {
         }
 
         // todo only if wallet have positive balance
-        if (coin.getPriceByPoolBalance !== undefined
-            || coin.getPriceByPoolUniswapV3 !== undefined) {
+        if (Number(wallet.balance) !== 0) {
             const price = await this.getTokenOrCoinPrice(coin);
             wallet.usd = (Number(wallet.balance) * price).toFixed(2);
+        } else {
+            wallet.usd = '0';
         }
         return ;
     }
@@ -133,7 +134,7 @@ export class WalletsService {
             let balanceInUsd = '0';
             const balance = (Number(balanceOfTheWallet).toFixed(8));
 
-            if (tokenData != undefined) { // get the price
+            if (Number(balance) !== 0 && tokenData != undefined) { // get the price
                 const price = await this.getTokenOrCoinPrice(tokenData);
                 balanceInUsd = (Number(balance) * price).toFixed(2);
             }
@@ -319,7 +320,7 @@ export class WalletsService {
             tokenPrice = await this.getTokenPriceByUniswapV3Pool(coinOrToken);
         }
         // todo by URL
-        
+
         this.lastLoadImportantPriceTime[coinOrToken.symbol] = (new Date()).getTime();
         this.importantPrices[coinOrToken.symbol] = tokenPrice;
         return tokenPrice;
