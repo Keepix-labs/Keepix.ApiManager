@@ -1,6 +1,6 @@
 {
     "name": "keepix.server",
-    "version": "0.0.134",
+    "version": "0.0.135",
     "description": "",
     "author": "",
     "private": true,
@@ -37,7 +37,7 @@
         "http": "^0.0.1-security",
         "https": "^1.0.0",
         "increase-build-package-public-directory": "^0.0.3",
-        "keepix-application-interface-build": "^0.0.20",
+        "keepix-application-interface-build": "^0.0.21",
         "keepix-ssh": "^0.4.22",
         "moment": "^2.29.4",
         "node-fetch": "^2.7.0",
