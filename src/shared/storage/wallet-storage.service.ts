@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { LoggerService } from "../logger.service";
 import { PropertiesStorage } from "./abstract/propertiesStorage";
 import { environment } from "src/environment";
+import path from "path";
 
 /**
  * Wallet Storage Service
@@ -17,6 +18,8 @@ import { environment } from "src/environment";
  */
 @Injectable()
 export class WalletStorageService extends PropertiesStorage {
+    public removedWalletFilePath = path.join(environment.appDirectory[environment.platform], '.removed-wallets.json');
+    
     protected readonly propertiesFilePath = environment.walletsFilePath[environment.platform];
     protected propertiesMap: any = undefined;
 
@@ -48,6 +51,49 @@ export class WalletStorageService extends PropertiesStorage {
             }
         }
         return undefined;
+    }
+
+    /**
+     * Deletion of target wallet by removing it from the main wallet list
+     * And saving it on the removedWalletFile.
+     * This function will save the deletion.
+     * This function will return an copy of the wallet deleted.
+     * If no wallet was found return undefined.
+     */
+    public removeWallet(type: string, address: string) {
+        if (this.propertiesMap[type] === undefined
+            || !Array.isArray(this.propertiesMap[type])) {
+            return undefined;
+        }
+
+        const wallet = this.propertiesMap[type].find(x => x.address === address);
+        
+        if (wallet === undefined) {
+            return undefined;
+        }
+        ////////////////////////
+        if (!fs.existsSync(this.removedWalletFilePath)) {
+            fs.writeFileSync(this.removedWalletFilePath, '{}');
+        }
+        let removedWallets = JSON.parse(fs.readFileSync(this.removedWalletFilePath).toString());
+
+        if (removedWallets[type] === undefined) {
+            removedWallets[type] = [];
+        }
+        // check if already deleted in the past.
+        if (!removedWallets[type].find(x => x.address === address)) {
+            removedWallets[type].push(wallet);
+        }
+        fs.writeFileSync(this.removedWalletFilePath, JSON.stringify(removedWallets, null, 4));
+        const copy = JSON.parse(JSON.stringify(wallet));
+        ////////////////////////
+        
+        // update
+        const newListOfTheType = this.propertiesMap[type].filter(x => x.address !== address);
+        this.propertiesMap[type] = newListOfTheType;
+        this.save();
+
+        return copy;
     }
 
     public existsWallet(type: string, address: string) {

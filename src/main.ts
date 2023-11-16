@@ -84,6 +84,9 @@ async function bootstrap() {
     next();
   });
 
+  // Keepix Wallet icons
+  app.use('/wallets/icons', express.static(path.join(environment.myNpmModulesDir, 'keepix-tokens/icons')));
+
   // plateform .keepix creation of the directory
   if (!fs.existsSync(environment.appDirectory[environment.platform])) {
     fs.mkdirSync(environment.appDirectory[environment.platform]);

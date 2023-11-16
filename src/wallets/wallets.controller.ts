@@ -6,6 +6,7 @@ import fetch from 'node-fetch';
 import { WalletsService } from './wallets.service';
 import { WalletStorageService } from 'src/shared/storage/wallet-storage.service';
 import { AnalyticsService } from 'src/shared/storage/analytics.service';
+import { coins, tokens } from "keepix-tokens";
 
 @ApiTags('Wallets')
 @Controller('wallets')
@@ -32,29 +33,19 @@ export class WalletsController {
         for (let i = 0; i < wallets.length; i++) {
             let wallet = wallets[i];
 
-            if (wallet.type == 'bitcoin') {
-                wallet.icon = 'logos:bitcoin';
-                wallet.nativeCoinName = 'BTC';
-            }
-            if (wallet.type == 'ethereum') {
-                wallet.icon = 'logos:ethereum';
-                wallet.nativeCoinName = 'ETH';
-            }
-            if (wallet.type == 'bsc') {
-                wallet.icon = 'mingcute:binance-coin-bnb-fill';
-                wallet.nativeCoinName = 'BNB';
-            }
-            if (wallet.type == 'avalanche') {
-                wallet.icon = 'cryptocurrency-color:avax';
-                wallet.nativeCoinName = 'AVAX';
-            }
-            if (wallet.type == 'arbitrum') {
-                wallet.icon = 'https://checkdot.io/assets/chains/ARB.png';
-                wallet.nativeCoinName = 'ETH';
+            if (coins[wallet.type] !== undefined) {
+                if (coins[wallet.type].icon !== undefined) {
+                    if (coins[wallet.type].icon.startsWith('./icons/')) {
+                        wallet.icon = `/wallets/icons/${coins[wallet.type].icon.replace('./icons/', '')}`;
+                    } else {
+                        wallet.icon = coins[wallet.type].icon;
+                    }
+                }
+                wallet.nativeCoinName = coins[wallet.type].nativeCoinName;
             }
 
             await this.walletsService.getNativeBalance(wallet);
-            await this.walletsService.getTokensBalance(wallet);
+            await this.walletsService.getBalanceOfTokens(wallet);
 
             walletsCopy.push({
                 ... wallet,
@@ -97,7 +88,7 @@ export class WalletsController {
         let wallet = this.walletStorageService.getWallet(body.type, body.address);
         if (wallet != undefined) {
             await this.walletsService.getNativeBalance(wallet, true);
-            await this.walletsService.getTokensBalance(wallet, true);
+            await this.walletsService.getBalanceOfTokens(wallet, true);
         }
         return wallet;
     }
@@ -141,12 +132,13 @@ export class WalletsController {
             if (wallet.tokens.find(x => x.contractAddress.toUpperCase() === body.contractAddress.toUpperCase())) {
                 return { success: false, description: 'Already Present.' };
             }
-            wallet.tokens.push({
+            let token = {
                 name: tokenSymbol,
-                contractAddress: body.contractAddress,
-            });
+                contractAddress: body.contractAddress
+            };
+            wallet.tokens.push(token);
             this.walletStorageService.save();
-            await this.walletsService.getTokensBalance(wallet, true);
+            await this.walletsService.getBalanceOfToken(wallet, token, true);
             return { success: true, description: 'Added' };
         }
         return { success: false, description: 'Wallet not found.' };
@@ -154,7 +146,7 @@ export class WalletsController {
 
     @ApiBody({ type: Object })
     @Post('delete')
-    @ApiOperation({ summary: 'Delete a wallet.' })
+    @ApiOperation({ summary: 'Delete a wallet (Not really removed).' })
     async delete(@Body() body: any) {
 
         if (body.address == undefined) {
@@ -163,19 +155,23 @@ export class WalletsController {
                 description: 'No Address Specified.'
             };
         }
+        if (body.type == undefined) {
+            return {
+                success: false,
+                description: 'No Type Specified.'
+            };
+        }
 
-        let targetWallet = this.walletStorageService.getWalletByAddress(body.address);
+        let targetWallet = this.walletStorageService.removeWallet(body.type, body.address);
         if (targetWallet == undefined) {
             return {
                 success: false,
                 description: 'Wallet address not found.'
             };
         }
-        targetWallet.deleted = true;
-        this.walletStorageService.save();
         return {
             success: true,
-            description: `Wallet ${body.address} deleted.`
+            description: `Wallet ${body.address} moved on "${this.walletStorageService.removedWalletFilePath}".`
         };
     }
 }

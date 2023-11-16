@@ -8,6 +8,8 @@ import * as bitcore from 'bitcore-lib';
 import { WalletStorageService } from "src/shared/storage/wallet-storage.service";
 import moment from "moment";
 import { AnalyticsService } from "src/shared/storage/analytics.service";
+import { coins, tokens } from "keepix-tokens";
+import { getUniswapV3AmountOut } from "src/shared/utils/get-uniswap-v3-amount-out";
 
 @Injectable()
 export class WalletsService {
@@ -28,7 +30,7 @@ export class WalletsService {
 
         for (let wallet of wallets) {
             this.getNativeBalance(wallet, true);
-            this.getTokensBalance(wallet);
+            this.getBalanceOfTokens(wallet);
             this.analyticsService.putAnalyticWithLimitOfLength(`${wallet.type}-${wallet.address}`, {
                 balance: wallet.balance,
                 usd: wallet.usd,
@@ -46,14 +48,7 @@ export class WalletsService {
     }
 
     public getListOfTypes() {
-        return [
-            'bitcoin',
-            'ethereum',
-            'bsc',
-            'avalanche',
-            'arbitrum',
-            'polygon'
-        ];
+        return Object.keys(coins);
     }
 
     public async getNativeBalance(wallet: any, force: boolean = false) {
@@ -65,143 +60,89 @@ export class WalletsService {
         }
         wallet.lastLoadNativePriceTime = (new Date()).getTime();
 
-        if (wallet.type == 'bitcoin') {
-            await this.loadImportantTokenPrice('BTC');
+        const coin = coins[wallet.type];
 
-            const resultOfBalance = (await (await fetch(`https://blockchain.info/balance?active=${wallet.address}`)).json());
-            const balance = resultOfBalance[wallet.address]?.final_balance ?? 0;
-            wallet.balance = (balance / 100000000).toFixed(8);
-            wallet.usd = (Number(wallet.balance) * this.importantPrices['BTC']).toFixed(2);
+        if (coin === undefined) {
+            wallet.balance = '0';
             return ;
         }
-        if (wallet.type == 'ethereum' || wallet.type == 'arbitrum') {
-            await this.loadImportantTokenPrice('ETH');
 
+        if (coin.getBalanceByQuery !== undefined) {
+            try {
+                if (coin.getBalanceByQuery.method === 'GET') {
+                    const resultOfBalance = (await (await fetch(coin.getBalanceByQuery.url.replace(/\$address/gm, wallet.address))).json());
+                    const balance = eval(new Function("v", `with (v) { return (${coin.getBalanceByQuery.resultEval})}`)(resultOfBalance)) ?? 0;
+
+                    wallet.balance = (balance / 100000000).toFixed(8);
+                }
+            } catch (e) {
+                console.error(e);
+                wallet.balance = '0';
+            }
+        } else if (coin.type === 'evm') {
             const provider = this.getProvider(wallet.type);
-            const balance = await new Promise(async (resolve) => {
-                provider.getBalance(wallet.address).then((balance) => {
-                    const balanceInEth = ethers.utils.formatEther(balance);
-                    resolve(balanceInEth);
-                }).catch(() => resolve('0'));
-            });
-            wallet.balance = (Number(balance).toFixed(8));
-            wallet.usd = (Number(wallet.balance) * this.importantPrices['ETH']).toFixed(2);
-            return ;
-        }
-        if (wallet.type == 'bsc') {
-            await this.loadImportantTokenPrice('BNB');
 
-            const provider = this.getProvider(wallet.type);
-            const balance = await new Promise(async (resolve) => {
-                provider.getBalance(wallet.address).then((balance) => {
-                    const balanceInEth = ethers.utils.formatEther(balance);
-                    resolve(balanceInEth);
-                }).catch(() => resolve('0'));
-            });
-            wallet.balance = (Number(balance).toFixed(8));
-            wallet.usd = (Number(wallet.balance) * this.importantPrices['BNB']).toFixed(2);
-            return ;
+            if (provider !== undefined) {
+                const balance = await new Promise(async (resolve) => {
+                    provider.getBalance(wallet.address).then((balance) => {
+                        const balanceInEth = ethers.utils.formatEther(balance);
+                        resolve(balanceInEth);
+                    }).catch(() => resolve('0'));
+                });
+                wallet.balance = (Number(balance).toFixed(8));
+            } else {
+                wallet.balance = '0';
+            }
         }
-        if (wallet.type == 'avalanche') {
-            await this.loadImportantTokenPrice('AVAX');
 
-            const provider = this.getProvider(wallet.type);
-            const balance = await new Promise(async (resolve) => {
-                provider.getBalance(wallet.address).then((balance) => {
-                    const balanceInEth = ethers.utils.formatEther(balance);
-                    resolve(balanceInEth);
-                }).catch(() => resolve('0'));
-            });
-            wallet.balance = (Number(balance).toFixed(8));
-            wallet.usd = (Number(wallet.balance) * this.importantPrices['AVAX']).toFixed(2);
-            return ;
+        // todo only if wallet have positive balance
+        if (coin.getPriceByPoolBalance !== undefined
+            || coin.getPriceByPoolUniswapV3 !== undefined) {
+            const price = await this.getTokenOrCoinPrice(coin);
+            wallet.usd = (Number(wallet.balance) * price).toFixed(2);
         }
-        if (wallet.type == 'polygon') {
-            await this.loadImportantTokenPrice('MATIC');
-
-            const provider = this.getProvider(wallet.type);
-            const balance = await new Promise(async (resolve) => {
-                provider.getBalance(wallet.address).then((balance) => {
-                    const balanceInEth = ethers.utils.formatEther(balance);
-                    resolve(balanceInEth);
-                }).catch(() => resolve('0'));
-            });
-            wallet.balance = (Number(balance).toFixed(8));
-            wallet.usd = (Number(wallet.balance) * this.importantPrices['MATIC']).toFixed(2);
-            return ;
-        }
-        wallet.balance = '0';
         return ;
     }
 
-    public async getTokensBalance(wallet: any, force: boolean = false) {
-        // 10 min of caching
-        if (force === false
-            && wallet.lastLoadTokenPriceTime !== undefined
-            && moment(wallet.lastLoadTokenPriceTime).isAfter(moment().subtract(10, 'minutes'))) {
-            return ;
-        }
-        wallet.lastLoadTokenPriceTime = (new Date()).getTime();
-
-        // setup tokens
+    public async getBalanceOfTokens(wallet: any, force: boolean = false) {
+        // setup tokens if empty
         if (wallet.tokens === undefined) {
             wallet.tokens = [];
         }
-        if (wallet.type == 'ethereum' || wallet.type == 'arbitrum') {
-            await this.loadImportantTokenPrice('ETH');
-
-            const baseListOfTokens = [
-                {
-                    name: 'RPL',
-                    contractAddress: '0xd33526068d116ce69f19a9ee46f0bd304f21a51f',
-                    pair: '0xe42318ea3b998e8355a3da364eb9d48ec725eb45',
-                    icon: 'https://s2.coinmarketcap.com/static/img/coins/64x64/2943.png'
-                }
-            ].filter(x => !wallet.tokens.find(t => t.contractAddress === x.contractAddress));
-
-            const listOfTokens = [
-                ... baseListOfTokens,
-                ... wallet.tokens
-            ];
-
-            for (let token of listOfTokens) {
-                const balanceOfTheWallet = await this.getTokenBalanceOfAndFormatToUnit(token.contractAddress, wallet.address, wallet.type);
-                let balanceInUsd = '0';
-                let balance = (Number(balanceOfTheWallet).toFixed(8));
-
-                if (token.pair != undefined) { // get the price
-                    const tokenPriceInETH = await this.getTokenPriceOutFromPoolBalance(token.contractAddress, 18, '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, token.pair, wallet.type);
-                    const tokenPriceInUsd = tokenPriceInETH * this.importantPrices['ETH'];
-                    balanceInUsd = (Number(balance) * tokenPriceInUsd).toFixed(2);
-                }
-
-                let tokenDataFromWalletArray = wallet.tokens.find(x => x.contractAddress === token.contractAddress);
-                if (tokenDataFromWalletArray !== undefined) {
-                    tokenDataFromWalletArray.balance = balance;
-                    tokenDataFromWalletArray.usd = balanceInUsd;
-                } else {
-                    wallet.tokens.push({
-                        ... token,
-                        balance: balance,
-                        usd: balanceInUsd,
-                    });
-                }
-            }
-            return ;
-        }
-        if (wallet.type == 'bsc') {
-            return ;
-        }
-        if (wallet.type == 'bitcoin') {
-            return ;
-        }
-        if (wallet.type == 'avalanche') {
-            return ;
-        }
-        if (wallet.type == 'polygon') {
-            return ;
+        for (let token of wallet.tokens) {
+            await this.getBalanceOfToken(wallet, token, force);
         }
         return ;
+    }
+
+    public async getBalanceOfToken(wallet, token, force: boolean = false) {
+        ///////////////////// CACHING 10min
+        if (force === false
+            && token.lastPriceLoad !== undefined
+            && moment(token.lastPriceLoad).isAfter(moment().subtract(10, 'minutes'))) {
+            return ;
+        }
+        token.lastPriceLoad = (new Date()).getTime();
+        /////////////////////
+
+        const tokenData = tokens.find((x: any) => x.type === wallet.type && x.contractAddress === token.contractAddress);
+        const coin = coins[wallet.type];
+
+        if (coin.type == 'evm') {
+            const balanceOfTheWallet = await this.getTokenBalanceOfAndFormatToUnit(token.contractAddress, wallet.address, wallet.type);
+            let balanceInUsd = '0';
+            const balance = (Number(balanceOfTheWallet).toFixed(8));
+
+            if (tokenData != undefined) { // get the price
+                const price = await this.getTokenOrCoinPrice(tokenData);
+                balanceInUsd = (Number(balance) * price).toFixed(2);
+            }
+            token.balance = balance;
+            token.usd = balanceInUsd;
+        } else {
+            console.log(`Token SubType ${tokenData.subType} not managed.`);
+            token.balance = '0';
+        }
     }
 
     public async generateNewWallet(walletType: string, data: any) {
@@ -221,12 +162,18 @@ export class WalletsService {
             return true;
         };
 
+        const evmWallets = Object.entries(coins).map((entry: any) => {
+            const id = entry[0];
+            const coin = entry[1];
+            if (coin.type === 'evm') {
+                return { key: id, value: (options) => generateEvmWallet({ ... options, type: id }) };
+            }
+            return undefined;
+        })
+        .filter(x => x !== undefined)
+        .reduce((acc: any, w) => { acc[w.key] = w.value; return acc; }, {});
+
         const generativeWalletFunctions = {
-            'ethereum': (options) => generateEvmWallet({ ... options, type: 'ethereum' }),
-            'bsc': (options) => generateEvmWallet({ ... options, type: 'bsc' }),
-            'avalanche': (options) => generateEvmWallet({ ... options, type: 'avalanche' }),
-            'arbitrum': (options) => generateEvmWallet({ ... options, type: 'arbitrum' }),
-            'polygon': (options) => generateEvmWallet({ ... options, type: 'polygon' }),
             'bitcoin': (options) => {
                 const privateKey = new bitcore.PrivateKey();
                 const walletData = {
@@ -237,7 +184,8 @@ export class WalletsService {
                 this.walletStorageService.addWallet(walletData.type, walletData);
                 this.walletStorageService.save();
                 return true;
-            }
+            },
+            ... evmWallets
         };
 
         if (generativeWalletFunctions[walletType] == undefined) {
@@ -256,9 +204,7 @@ export class WalletsService {
             let wallet = undefined;
             
             try {
-                console.log(options);
                 wallet = new ethers.Wallet(options.privateKey);
-                console.log(wallet);
             } catch (e) {
                 this.loggerService.log('Wallet Import failed Missmatch privateKey.');
             }
@@ -278,18 +224,26 @@ export class WalletsService {
         };
 
         if (data.privateKey != undefined) {
+
+            const evmWallets = Object.entries(coins).map((entry: any) => {
+                const id = entry[0];
+                const coin = entry[1];
+                if (coin.type === 'evm') {
+                    return { key: id, value: (options) => importEvmWalletFromPrivateKey({ ... options, type: id }) };
+                }
+                return undefined;
+            })
+            .filter(x => x !== undefined)
+            .reduce((acc: any, w) => { acc[w.key] = w.value; return acc; }, {});;
+
             const importWalletViaPrivateKeyFunctions = {
-                'ethereum': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'ethereum' }),
-                'bsc': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'bsc' }),
-                'avalanche': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'avalanche' }),
-                'arbitrum': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'arbitrum' }),
-                'polygon': (options) => importEvmWalletFromPrivateKey({ ... options, type: 'polygon' })
+                ... evmWallets
             };
 
             if (importWalletViaPrivateKeyFunctions[walletType] == undefined) {
                 return {
                     success: false,
-                    description: 'Type not found.'
+                    description: 'Type of Wallet not Managed.'
                 };
             }
             return importWalletViaPrivateKeyFunctions[walletType](data);
@@ -301,7 +255,7 @@ export class WalletsService {
         if (wallet.type === 'bitcoin') {
             return { success: false, description: 'Transfer Not Managed.' };
         }
-        if (wallet.type === 'ethereum') {
+        if (wallet.subType === 'evm') {
             const provider = this.getProvider(wallet.type);
             const walletObj = new ethers.Wallet(wallet.privateKey, provider);
 
@@ -343,6 +297,99 @@ export class WalletsService {
         return undefined;
     }
 
+    private async getTokenOrCoinPrice(coinOrToken) {
+        //////////////////// CACHING 1h
+        let lastLoadPriceTime = 0;
+        let lastPrice = 0;
+        
+        if (coinOrToken.nativeCoinName !== undefined && this.lastLoadImportantPriceTime[coinOrToken.nativeCoinName] !== undefined) {
+            lastPrice = this.importantPrices[coinOrToken.nativeCoinName];
+        }
+        if (coinOrToken.symbol !== undefined && this.lastLoadImportantPriceTime[coinOrToken.symbol] !== undefined) {
+            lastPrice = this.importantPrices[coinOrToken.symbol];
+        }
+        if (moment(lastLoadPriceTime).isAfter(moment().subtract(1, 'hour'))) {
+            return lastPrice;
+        }
+        ///////////////////
+        let tokenPrice = 0;
+        if (coinOrToken.getPriceByPoolBalance !== undefined) {
+            tokenPrice = await this.getTokenPriceByPoolBalance(coinOrToken);
+        } else if (coinOrToken.getPriceByPoolUniswapV3 !== undefined) {
+            tokenPrice = await this.getTokenPriceByUniswapV3Pool(coinOrToken);
+        }
+        // todo by URL
+        
+        this.lastLoadImportantPriceTime[coinOrToken.symbol] = (new Date()).getTime();
+        this.importantPrices[coinOrToken.symbol] = tokenPrice;
+        return tokenPrice;
+    }
+
+    private async getTokenOrCoinPriceBySymbol(symbol) {
+        const coin = Object.values(coins).find((x: any) => x.nativeCoinName === symbol);
+        if (coin !== undefined) {
+            return await this.getTokenOrCoinPrice(coin);
+        } else {
+            const token = tokens.find((x: any) => x.symbol === symbol);
+            if (token !== undefined) {
+                return await this.getTokenOrCoinPrice(token);
+            }
+        }
+        console.log(`${symbol} not found.`);
+        return 0;
+    }
+
+    public async getTokenPriceByUniswapV3Pool(coinOrToken) {
+        let byPrice = undefined;
+
+        if (coinOrToken.getPriceByPoolUniswapV3.using !== undefined) {
+            return await this.getTokenOrCoinPriceBySymbol(coinOrToken.getPriceByPoolUniswapV3.mulBy);
+        }
+
+        if (coinOrToken.getPriceByPoolUniswapV3.mulBy !== undefined) {
+            byPrice = await this.getTokenOrCoinPriceBySymbol(coinOrToken.getPriceByPoolUniswapV3.mulBy);
+            if (byPrice === 0) {
+                return 0;
+            }
+        }
+        let amountInWeiOfOneTokenA = '1';
+        for (let i = 0; i < coinOrToken.getPriceByPoolUniswapV3.tokenADecimals; i++) {
+            amountInWeiOfOneTokenA = `${amountInWeiOfOneTokenA}0`;
+        }
+        const amountIn = ethers.utils.parseUnits(amountInWeiOfOneTokenA, 'wei');
+        const priceOut = await getUniswapV3AmountOut(
+            coinOrToken.getPriceByPoolUniswapV3.tokenA, coinOrToken.getPriceByPoolUniswapV3.tokenADecimals, // in token
+            coinOrToken.getPriceByPoolUniswapV3.tokenB, coinOrToken.getPriceByPoolUniswapV3.tokenBDecimals, // out token
+            coinOrToken.getPriceByPoolUniswapV3.poolAddress, // Pair
+            amountIn, // One tokenA
+            this.getProvider(coinOrToken.getPriceByPoolUniswapV3.blockchain) // Chain
+        );
+        console.log('GET getPriceByPoolUniswapV3 ', priceOut);
+        return coinOrToken.getPriceByPoolUniswapV3.mulBy ? Number(priceOut) * byPrice : Number(priceOut);
+    }
+
+    private async getTokenPriceByPoolBalance(coinOrToken) {
+        let byPrice = undefined;
+
+        if (coinOrToken.getPriceByPoolBalance.using !== undefined) {
+            return await this.getTokenOrCoinPriceBySymbol(coinOrToken.getPriceByPoolBalance.mulBy);
+        }
+
+        if (coinOrToken.getPriceByPoolBalance.mulBy !== undefined) {
+            byPrice = await this.getTokenOrCoinPriceBySymbol(coinOrToken.getPriceByPoolBalance.mulBy);
+            if (byPrice === 0) {
+                return 0;
+            }
+        }
+        const priceOut = await this.getTokenPriceOutFromPoolBalance(
+            coinOrToken.getPriceByPoolBalance.tokenA, coinOrToken.getPriceByPoolBalance.tokenADecimals, // in token
+            coinOrToken.getPriceByPoolBalance.tokenB, coinOrToken.getPriceByPoolBalance.tokenBDecimals, // out token
+            coinOrToken.getPriceByPoolBalance.poolAddress, // Pair
+            coinOrToken.getPriceByPoolBalance.blockchain // Chain
+        );
+        return coinOrToken.getPriceByPoolBalance.mulBy ? priceOut * byPrice : priceOut;
+    }
+
     private async getTokenPriceOutFromPoolBalance(_in, _in_units, _out, _out_units, _pair, type) {
         let balanceIN = await this.getTokenBalanceOf(
             _in,//'0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
@@ -358,65 +405,6 @@ export class WalletsService {
         let integerBalanceOUT = ethers.utils.formatUnits(balanceOUT, _out_units);
         return Number(integerBalanceOUT) / Number(integerBalanceIN);
     };
-
-    private async loadImportantTokenPrice(symbol: string) {
-        if (this.lastLoadImportantPriceTime[symbol] !== undefined && moment(this.lastLoadImportantPriceTime[symbol]).isAfter(moment().subtract(1, 'hour'))) {
-            // keep current values for an hour
-            return ;
-        }
-
-        if (symbol === 'ETH') {
-            this.importantPrices[symbol] = await this.getTokenPriceOutFromPoolBalance(
-                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // in (WETH)
-                '0x6B175474E89094C44Da98b954EedeAC495271d0F', 18, // out (DAI) Important Only 18 decimals!
-                '0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11', // DAI/WETH uniswap v2 Pair
-                'ethereum' // ethereum Chain
-            );
-        }
-        if (symbol === 'BNB') {
-            this.importantPrices[symbol] = await this.getTokenPriceOutFromPoolBalance(
-                '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, // in (WBNB)
-                '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', 18, // out (BUSD) Important Only 18 decimals!
-                '0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16', // Pair
-                'bsc' // bsc Chain
-            );
-        }
-        if (symbol === 'BTC') {
-            if (this.importantPrices['ETH'] === undefined) {
-                await this.loadImportantTokenPrice('ETH');
-            }
-            this.importantPrices[symbol] = (await this.getTokenPriceOutFromPoolBalance(
-                '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', 8, // in (WBTC)
-                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // out (WETH) Important Only 18 decimals!
-                '0xceff51756c56ceffca006cd410b03ffc46dd3a58', // WBTC/WETH uniswap v2 Pair
-                'ethereum' // ethereum Chain
-            )) * this.importantPrices['ETH'];
-        }
-        if (symbol === 'AVAX') {
-            if (this.importantPrices['BNB'] === undefined) {
-                await this.loadImportantTokenPrice('BNB');
-            }
-            this.importantPrices[symbol] = (await this.getTokenPriceOutFromPoolBalance(
-                '0x1ce0c2827e2ef14d5c4f29a091d735a204794041', 18, // in (AVAX)
-                '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', 18, // out (WBNB) Important Only 18 decimals!
-                '0x151268db1579ebc5306d4aaa5dcc627646e6986f', // WBNB/AVAX uniswap v2 Pair
-                'bsc' // bsc Chain
-            )) * this.importantPrices['BNB'];
-        }
-        if (symbol === 'MATIC') {
-            if (this.importantPrices['ETH'] === undefined) {
-                await this.loadImportantTokenPrice('ETH');
-            }
-            this.importantPrices[symbol] = (await this.getTokenPriceOutFromPoolBalance(
-                '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0', 18, // in (MATIC)
-                '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 18, // out (WETH) Important Only 18 decimals!
-                '0x819f3450da6f110ba6ea52195b3beafa246062de', // WETH/MATIC uniswap v2 Pair
-                'ethereum' // ethereum Chain
-            )) * this.importantPrices['ETH'];
-        }
-        this.lastLoadImportantPriceTime[symbol] = (new Date()).getTime();
-        this.loggerService.log(`${symbol}=${this.importantPrices[symbol]}`);
-    }
 
     private getTokenContract(tokenAddress, type) {
         const contratToken = new ethers.Contract(
@@ -461,39 +449,19 @@ export class WalletsService {
     }
 
     private getProvider(type: string) {
-        if (type === 'ethereum') {
-            const provider = new ethers.providers.JsonRpcProvider({
-                url: 'https://mainnet.infura.io/v3/00e69497300347a38e75c3287621cb16',
-                name: 'Ethereum',
-                chainId: 1
-            } as any);
-            return provider;
+        if (coins[type] === undefined) {
+            return undefined;
         }
-        if (type === 'bsc') {
-            const provider = new ethers.providers.JsonRpcProvider({
-                url: 'https://bsc-dataseed1.ninicoin.io',
-                name: 'Binance Smart Chain',
-                chainId: 56
-            } as any);
-            return provider;
+        if (coins[type].rpcs === undefined || !Array.isArray(coins[type].rpcs)) {
+            return undefined;
         }
-        if (type === 'avalanche') {
-            const provider = new ethers.providers.JsonRpcProvider({
-                url: 'https://avalanche-mainnet.infura.io/v3/00e69497300347a38e75c3287621cb16',
-                name: 'Avalanche',
-                chainId: 43114
-            } as any);
-            return provider;
+        if (coins[type].rpcs.length === 0) {
+            return undefined;
         }
-        if (type === 'arbitrum') {
-            const provider = new ethers.providers.JsonRpcProvider({
-                url: 'https://arbitrum-mainnet.infura.io/v3/00e69497300347a38e75c3287621cb16',
-                name: 'Arbitrum',
-                chainId: 42161
-            } as any);
-            return provider;
-        }
-        return undefined;
+        const rpc = coins[type].rpcs[Math.floor(Math.random()*coins[type].rpcs.length)];
+        const provider = new ethers.providers.JsonRpcProvider(rpc as any);
+
+        return provider;
     }
 
     private getRandomAccount(type: string) {

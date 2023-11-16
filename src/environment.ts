@@ -6,6 +6,7 @@ const env = 'prod';
 const platform = process.platform.replace("darwin", "osx").replace("win32", "win");
 const appDataPath = path.join(platform == 'win' ? process.env.APPDATA : process.env.HOME, '.keepix');
 const npmNodeModulesGlobalDir = platform == 'win' ? path.join(process.env.APPDATA, 'npm/node_modules') : path.join(process.argv[0], '../../lib/node_modules');
+const myNpmModulesDir = fs.existsSync(path.join(__dirname, '../node_modules')) ? path.join(__dirname, '../node_modules') : path.join(__dirname, '../../node_modules');
 
 export const environment = {
     ENV: env,
@@ -39,6 +40,7 @@ export const environment = {
     arch: process.arch,
     platformId: `${platform}-${process.arch}`,
     globalNodeModulesDirectory: npmNodeModulesGlobalDir,
+    myNpmModulesDir: myNpmModulesDir,
     appDirectory: {
         'win': appDataPath,
         'osx': appDataPath,
