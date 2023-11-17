@@ -34,22 +34,29 @@ export class BindService {
         this.intervalIds.push(intervalId);
     }
 
-    public clean() {
-        // this.expressServers.forEach(x => {
-        //     x.delete();
-        // });
-
+    public async clean() {
+        this.expressServers.forEach(x => {
+            x.removeAllListeners();
+        });
         this.httpServers.forEach(x => {
-            x.close(() => {});
+            x.close(() => {
+                console.log('Http Server Closed.');
+            });
         });
         this.httpsServers.forEach(x => {
-            x.close(() => {});
+            x.close(() => {
+                console.log('Https Server Closed.');
+            });
         });
         this.schedulers.forEach(x => {
             x.cancel();
         });
         this.intervalIds.forEach(x => {
             clearInterval(x);
+        });
+
+        return new Promise((resolve) => {
+            setTimeout(resolve, 1000);
         });
     }
 }

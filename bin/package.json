@@ -1,6 +1,6 @@
 {
     "name": "keepix-server-build",
-    "version": "0.0.139",
+    "version": "0.0.152",
     "description": "simple CLI for manage keepix repositories",
     "main": "run.js",
     "bin": {
@@ -36,6 +36,7 @@
         "keepix-ssh": "^0.4.22",
         "keepix-tokens": "^0.0.6",
         "moment": "^2.29.4",
+        "nocache": "^4.0.0",
         "node-fetch": "^2.7.0",
         "node-schedule": "^2.1.1",
         "nodejs-file-downloader": "^4.12.1",

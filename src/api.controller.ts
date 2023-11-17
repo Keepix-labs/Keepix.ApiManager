@@ -57,27 +57,20 @@ export class ApiController {
         return await this.wapService.connectToWifi(body.ssid, body.password);
     }
 
-    // @Get('reset')
-    // async reset() {
-    //     this.wapService.stopHotSpot().then(async () => {
-    //         await this.bashService.execWrapper('reboot'); // reboot
-    //     });
-    //     return true;
-    // }
-
     @Get('/app/keepix-information')
     async keepixInformation() {
-        return {
+        const result = {
             version: environment.appVersion,
             latestVersion: await this.apiService.getLatestVersionOfApi()
-        }
+        };
+        return result;
     }
 
     @Get('/app/restart')
     async restart() {
-        setTimeout(() => {
-
-            this.bindService.clean();
+        setTimeout(async () => {
+            await this.bindService.clean();
+            console.log('READY RESTARTING');
             require("child_process")
                 .spawn(
                   process.argv.shift(),
@@ -103,10 +96,6 @@ export class ApiController {
             console.log(description);
             return { success: false, description: description };
         }
-        // let latestVersion = await this.apiService.getLatestVersionOfApi();
-        // if (environment.appVersion == latestVersion) {
-        //     return { success: false, description: 'Already Up-to-date.' };
-        // }
 
         fs.writeFileSync(path.join(environment.appDirectory[environment.platform], 'update'), version);
 

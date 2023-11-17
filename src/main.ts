@@ -19,6 +19,7 @@ import path from 'path';
 import url from 'url';
 import { BindService } from './shared/bind.service';
 import { WalletStorageService } from './shared/storage/wallet-storage.service';
+import nocache from 'nocache';
 
 async function bootstrap() {
 
@@ -30,6 +31,7 @@ async function bootstrap() {
     }
   );
 
+  app.use(nocache());
   app.get(LoggerService).log(`--------------------------------------------------`);
   app.get(LoggerService).log(` ____  __.                   .__`);
   app.get(LoggerService).log(`|    |/ _|____   ____ ______ |__|__  ___`);
@@ -84,7 +86,7 @@ async function bootstrap() {
     next();
   });
 
-  // Keepix Wallet icons
+  // Keepix Wallet icons from keepix.tokens project
   app.use('/wallets/icons', express.static(path.join(environment.myNpmModulesDir, 'keepix-tokens/icons')));
 
   // plateform .keepix creation of the directory
