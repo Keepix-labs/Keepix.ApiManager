@@ -7,6 +7,7 @@ import { BashService } from "src/shared/bash.service";
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
 import path from "path";
+import { UpnpService } from "src/upnp/upnp.service";
 
 @Injectable()
 export class PluginsService {
@@ -18,13 +19,15 @@ export class PluginsService {
     constructor(
         private loggerService: LoggerService,
         private propertiesService: PropertiesService,
-        private bashService: BashService) {
+        private bashService: BashService,
+        private upnpService: UpnpService) {
     }
 
     async run() {
         this.loggerService.log(`${this.title} Run Started`);
         await this.detectPluginsAndLatestVersions();
         await this.loadInstalledPlugins();
+        await this.openAndCheckUpnpPortsOnInstalledPlugins();
         this.loggerService.log(`${this.title} Run Finished`);
     }
 
@@ -52,6 +55,46 @@ export class PluginsService {
                     }
                 };
             }
+        }
+    }
+
+    public async openAndCheckUpnpPortsOnInstalledPlugins() {
+        const internalPlugins = this.propertiesService.getProperty('plugins', []);
+
+        if (await this.upnpService.isEnabled()) {
+            const mapping = await this.upnpService.getMapping();
+
+            if (mapping === undefined || !Array.isArray(mapping)) {
+                this.loggerService.log('[Error] upnp enabled but get mapping failed (Retry in 10 minutes).');
+                return ;
+            }
+            for (let plugin of internalPlugins) {
+                if (plugin.requires === undefined) {
+                    continue ;
+                }
+                if (plugin.requires.ports === undefined || !Array.isArray(plugin.requires.ports)) {
+                    continue ;
+                }
+                for (let portInformation of plugin.requires.ports) {
+                    if (plugin.installed === true) { // map or remap the port
+                        const mapResult = await this.upnpService.map(portInformation.external, portInformation.protocol, portInformation.description);
+                        if (mapResult !== undefined) {
+                            this.loggerService.log(`[Success] map (ExternalPort:${portInformation.external}), (Protocol:${portInformation.protocol}), (Description:${portInformation.description}).`);
+                        } else {
+                            this.loggerService.log(`[Error] map Failed of (ExternalPort:${portInformation.external}), (Protocol:${portInformation.protocol}), (Description:${portInformation.description}) - (Retry in 10 minutes).`);
+                        }
+                    } else if (mapping.find(x => x.NewExternalPort == portInformation.external)) { // if port exists unmap
+                        const mapResult = this.upnpService.unmap(portInformation.external, portInformation.protocol);
+                        if (mapResult !== undefined) {
+                            this.loggerService.log(`[Success] unmap (ExternalPort:${portInformation.external}), (Protocol:${portInformation.protocol}), (Description:${portInformation.description}).`);
+                        } else {
+                            this.loggerService.log(`[Error] unmap Failed of (ExternalPort:${portInformation.external}), (Protocol:${portInformation.protocol}), (Description:${portInformation.description}) - (Retry in 10 minutes).`);
+                        }
+                    }
+                }
+            }
+        } else {
+            this.loggerService.log('[Warning] UPNP is Disabled.');
         }
     }
 

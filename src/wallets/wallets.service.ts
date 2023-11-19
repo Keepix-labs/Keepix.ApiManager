@@ -22,7 +22,8 @@ export class WalletsService {
     constructor(
         private loggerService: LoggerService,
         private walletStorageService: WalletStorageService,
-        private analyticsService: AnalyticsService) {
+        private analyticsService: AnalyticsService,
+        private propertiesService: PropertiesService) {
     }
 
     public async run() {
@@ -458,6 +459,14 @@ export class WalletsService {
     }
 
     private getProvider(type: string) {
+        // override rpc by config
+        if (this.propertiesService.getProperty("rpcs") !== undefined) {
+            const rpcs = this.propertiesService.getProperty("rpcs");
+            if (typeof rpcs === 'object' && rpcs[type] !== undefined) {
+                const provider = new ethers.providers.JsonRpcProvider(rpcs[type] as any);
+                return provider;
+            }
+        }
         if (coins[type] === undefined) {
             return undefined;
         }

@@ -7,9 +7,17 @@ import { ApiController } from './api.controller';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { SettingsModule } from './settings/settings.module';
 import { WalletsModule } from './wallets/wallets.module';
+import { UpnpModule } from './upnp/upnp.module';
 
 @Module({
-  imports: [PluginsModule, MonitoringModule, SettingsModule, SharedModule, WalletsModule],
+  imports: [
+    PluginsModule,
+    MonitoringModule,
+    SettingsModule,
+    SharedModule,
+    WalletsModule,
+    UpnpModule
+  ],
   controllers: [ApiController],
   providers: [ApiService],
 })

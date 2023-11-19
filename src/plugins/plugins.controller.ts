@@ -69,26 +69,38 @@ export class PluginsController {
             }
 
             const resultOfNpmInstall = await this.bashService.execWrapper(`npm install -g ${plugin.packageName}@${version}`);
-
-            console.log(resultOfNpmInstall);
+            this.loggerService.log(`Plugin Installation result of npm install -g: ${resultOfNpmInstall}`);
 
             const versionOfInstalledPlugin = await this.pluginsService.getVersionOfPlugin(plugin);
+            this.loggerService.log(`Plugin Installation new version: ${versionOfInstalledPlugin}`);
 
-            console.log(versionOfInstalledPlugin);
             if (versionOfInstalledPlugin == undefined) {
                 this.runningTasks[taskId] = {
                     status: 'ERROR',
                     description: 'Installation failed.'
                 };
+                this.loggerService.log(`[Warning] Plugin Installation getVersionOfPlugin failed.`);
                 return ;
             }
 
             // update plugin
             plugin.installed = true;
+            plugin.ready = false;
             plugin.version = versionOfInstalledPlugin;
             this.propertiesService.save();
 
+            this.runningTasks[taskId] = {
+                status: 'INSTALLING',
+                description: 'Binding of plugin functions.'
+            };
+            // prepare function of running commands
             await this.pluginsService.loadInstalledPlugins();
+            this.runningTasks[taskId] = {
+                status: 'INSTALLING',
+                description: 'Loading pre-required Upnp Ports.'
+            };
+            // refresh upnp ports
+            await this.pluginsService.openAndCheckUpnpPortsOnInstalledPlugins();
             
             this.runningTasks[taskId] = {
                 status: 'INSTALLING',
@@ -98,7 +110,7 @@ export class PluginsController {
             this.runCommandToPlugin(pluginId, {
                 key: 'install',
                 ... body
-            }).then((resultOfExec) => {
+            }).then(async (resultOfExec) => {
                 if (resultOfExec.result == true) {
                     plugin.ready = true;
                     this.propertiesService.save();
@@ -109,7 +121,7 @@ export class PluginsController {
                 } else {
                     this.runningTasks[taskId] = {
                         status: 'ERROR',
-                        description: resultOfExec.stdOut
+                        description: `Error during running install function stackTrace: "${resultOfExec.stdOut}"`
                     };
                     plugin.installed = false;
                     this.propertiesService.save();
@@ -148,7 +160,7 @@ export class PluginsController {
         this.runCommandToPlugin(pluginId, {
             key: 'uninstall',
             ... body
-        }).then((resultOfExec) => {
+        }).then(async (resultOfExec) => {
             if (resultOfExec.result == true) {
                 let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
                 plugin.ready = false;
@@ -163,7 +175,7 @@ export class PluginsController {
             } else {
                 this.runningTasks[taskId] = {
                     status: 'ERROR',
-                    description: resultOfExec.stdOut
+                    description: `Error during running uninstall function stackTrace: "${resultOfExec.stdOut}"`
                 };
             }
         });
