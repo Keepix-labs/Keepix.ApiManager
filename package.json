@@ -1,6 +1,6 @@
 {
     "name": "keepix.server",
-    "version": "0.0.155",
+    "version": "0.0.156",
     "description": "",
     "author": "",
     "private": true,
@@ -38,9 +38,9 @@
         "http": "^0.0.1-security",
         "https": "^1.0.0",
         "increase-build-package-public-directory": "^0.0.3",
-        "keepix-application-interface-build": "^0.0.27",
+        "keepix-application-interface-build": "^0.0.28",
         "keepix-ssh": "^0.4.22",
-        "keepix-tokens": "^0.0.6",
+        "keepix-tokens": "^0.0.8",
         "moment": "^2.29.4",
         "nocache": "^4.0.0",
         "node-fetch": "^2.7.0",
@@ -48,6 +48,7 @@
         "nodejs-file-downloader": "^4.12.1",
         "reflect-metadata": "^0.1.13",
         "rxjs": "^7.8.1",
+        "sotez": "^13.0.1",
         "wireless-tools": "^0.19.0"
     },
     "devDependencies": {

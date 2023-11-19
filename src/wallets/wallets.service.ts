@@ -3,13 +3,16 @@ import { LoggerService } from "src/shared/logger.service";
 import { PropertiesService } from "src/shared/storage/properties.service";
 import { BashService } from "src/shared/bash.service";
 import fetch from 'node-fetch';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import * as bitcore from 'bitcore-lib';
 import { WalletStorageService } from "src/shared/storage/wallet-storage.service";
 import moment from "moment";
 import { AnalyticsService } from "src/shared/storage/analytics.service";
 import { coins, tokens } from "keepix-tokens";
 import { getUniswapV3AmountOut } from "src/shared/utils/get-uniswap-v3-amount-out";
+import { Sotez, cryptoUtils } from 'sotez';
+
+const TEZOS_DERIVATION_PATH = "m/44'/1729'/0'/0'";
 
 @Injectable()
 export class WalletsService {
@@ -102,6 +105,11 @@ export class WalletsService {
             } else {
                 wallet.balance = '0';
             }
+        } else if (coin.type === 'tezos') {
+            const tezos = this.getProvider(wallet.type);
+            const balanceInWei = await tezos.getBalance(wallet.address);
+            const balance = ethers.utils.formatUnits(BigNumber.from(`${balanceInWei}`), 6);
+            wallet.balance = (Number(balance).toFixed(8));
         }
 
         // todo only if wallet have positive balance
@@ -169,14 +177,14 @@ export class WalletsService {
             };
             this.walletStorageService.addWallet(walletData.type, walletData);
             this.walletStorageService.save();
-            return true;
+            return { success: true, description: 'Wallet Generated Succesfully.' };
         };
 
         const evmWallets = Object.entries(coins).map((entry: any) => {
             const id = entry[0];
             const coin = entry[1];
             if (coin.type === 'evm') {
-                return { key: id, value: (options) => generateEvmWallet({ ... options, type: id }) };
+                return { key: id, value: async (options) => generateEvmWallet({ ... options, type: id }) };
             }
             return undefined;
         })
@@ -184,7 +192,7 @@ export class WalletsService {
         .reduce((acc: any, w) => { acc[w.key] = w.value; return acc; }, {});
 
         const generativeWalletFunctions = {
-            'bitcoin': (options) => {
+            'bitcoin': async (options) => {
                 const privateKey = new bitcore.PrivateKey();
                 const walletData = {
                     type: 'bitcoin',
@@ -193,7 +201,22 @@ export class WalletsService {
                 };
                 this.walletStorageService.addWallet(walletData.type, walletData);
                 this.walletStorageService.save();
-                return true;
+                return { success: true, description: 'Wallet Generated Succesfully.' };
+            },
+            'tezos': async (options) => {
+                const mnemonic = cryptoUtils.generateMnemonic();
+                const { sk: privateKey } = await cryptoUtils.generateKeys(mnemonic, undefined, TEZOS_DERIVATION_PATH);
+                const { pkh: address } = await cryptoUtils.extractKeys(privateKey);
+                //{ address, privateKey, mnemonic } as TezosWallet
+                const walletData = {
+                    type: 'tezos',
+                    address: address,
+                    privateKey: privateKey,
+                    mnemonic: mnemonic
+                };
+                this.walletStorageService.addWallet(walletData.type, walletData);
+                this.walletStorageService.save();
+                return { success: true, description: 'Wallet Generated Succesfully.' };
             },
             ... evmWallets
         };
@@ -205,7 +228,7 @@ export class WalletsService {
             };
         }
 
-        return generativeWalletFunctions[walletType](data);
+        return await generativeWalletFunctions[walletType](data);
     }
 
     public async importExistingWallet(walletType: string, data: any) {
@@ -220,11 +243,13 @@ export class WalletsService {
                     wallet = new ethers.Wallet(options.privateKey);
                 }
             } catch (e) {
-                this.loggerService.log('Wallet Import failed Missmatch privateKey.');
+                this.loggerService.log('Wallet Import failed Missmatch privateKey or mnemonic.');
             }
-            if (wallet == undefined
-                || this.walletStorageService.existsWallet(options.type, wallet.address)) {
-                return false;
+            if (wallet == undefined) {
+                return { success: false, description: 'Wallet Import failed Missmatch privateKey or mnemonic.' };
+            }
+            if (this.walletStorageService.existsWallet(options.type, wallet.address)) {
+                return { success: false, description: 'Wallet Already Exists.' };
             }
             const walletData = {
                 type: options.type,
@@ -235,7 +260,7 @@ export class WalletsService {
             };
             this.walletStorageService.addWallet(walletData.type, walletData);
             this.walletStorageService.save();
-            return true;
+            return { success: true, description: 'Wallet Imported Succesfully.' };
         };
 
         if (data.privateKey != undefined || data.mnemonic != undefined) {
@@ -244,7 +269,7 @@ export class WalletsService {
                 const id = entry[0];
                 const coin = entry[1];
                 if (coin.type === 'evm') {
-                    return { key: id, value: (options) => importEvmWalletFromPrivateKey({ ... options, type: id }) };
+                    return { key: id, value: async (options) => importEvmWalletFromPrivateKey({ ... options, type: id }) };
                 }
                 return undefined;
             })
@@ -252,6 +277,43 @@ export class WalletsService {
             .reduce((acc: any, w) => { acc[w.key] = w.value; return acc; }, {});;
 
             const importWalletViaPrivateKeyFunctions = {
+                'tezos': async (options) => {
+                    let wallet = undefined;
+                    try {
+                        if (options.mnemonic !== undefined) {
+                            const { sk: privateKey } = await cryptoUtils.generateKeys(options.mnemonic, undefined, TEZOS_DERIVATION_PATH);
+                            const { pkh: address } = await cryptoUtils.extractKeys(privateKey);
+                            wallet = {
+                                mnemonic: options.mnemonic,
+                                privateKey: privateKey,
+                                address: address
+                            };
+                        } else {
+                            const { pkh: address } = await cryptoUtils.extractKeys(options.privateKey);
+                            wallet = {
+                                privateKey: options.privateKey,
+                                address: address
+                            };
+                        }
+                    } catch (e) {
+                        this.loggerService.log('Wallet Import failed Missmatch privateKey or mnemonic.');
+                    }
+                    if (wallet == undefined) {
+                        return { success: false, description: 'Wallet Import failed Missmatch privateKey or mnemonic.' };
+                    }
+                    if (this.walletStorageService.existsWallet(options.type, wallet.address)) {
+                        return { success: false, description: 'Wallet Already Exists.' };
+                    }
+                    const walletData = {
+                        type: 'tezos',
+                        address: wallet.address,
+                        privateKey: wallet.privateKey,
+                        mnemonic: wallet.mnemonic
+                    };
+                    this.walletStorageService.addWallet(walletData.type, walletData);
+                    this.walletStorageService.save();
+                    return { success: true, description: 'Wallet Imported Succesfully.' };
+                },
                 ... evmWallets
             };
 
@@ -261,16 +323,40 @@ export class WalletsService {
                     description: 'Type of Wallet not Managed.'
                 };
             }
-            return importWalletViaPrivateKeyFunctions[walletType](data);
+            return await importWalletViaPrivateKeyFunctions[walletType](data);
         }
-        return false;
+        return {
+            success: false,
+            description: 'Invalid Args'
+        };
     }
 
     public async sendCoinTo(wallet, receiverAddress, amountInEther) {
         if (wallet.type === 'bitcoin') {
             return { success: false, description: 'Transfer Not Managed.' };
         }
-        if (wallet.subType === 'evm') {
+        if (coins[wallet.type].type === 'tezos') {
+            try {
+                const tezos: Sotez = this.getProvider(wallet.type);
+                await tezos.importKey(
+                    wallet.privateKey,
+                );
+                const amount = ethers.utils.parseUnits(amountInEther, 6).toString();
+                const tx = await tezos.transfer({
+                    to: receiverAddress,
+                    amount: Number(amount),
+                    storageLimit: 10000 // important for enable storage of the tx
+                });
+                this.loggerService.log(`[Tezos] Tranfer (amount:${amountInEther}) (to:${receiverAddress}) Waiting for operation ${tx.hash}`);
+                const blockHash = await tezos.awaitOperation(tx.hash);
+                this.loggerService.log(`[Tezos] Operation found in block ${blockHash}`);
+                return { success: true, description: `${tx.hash}` };
+            } catch (e) {
+                console.log(e);
+                return { success: false, description: e.message };
+            }
+        }
+        if (coins[wallet.type].type === 'evm') {
             const provider = this.getProvider(wallet.type);
             const walletObj = new ethers.Wallet(wallet.privateKey, provider);
 
@@ -463,7 +549,7 @@ export class WalletsService {
         return '0';
     }
 
-    private getProvider(type: string) {
+    private getProvider(type: string): any {
         // override rpc by config
         if (this.propertiesService.getProperty("rpcs") !== undefined) {
             const rpcs = this.propertiesService.getProperty("rpcs");
@@ -482,9 +568,24 @@ export class WalletsService {
             return undefined;
         }
         const rpc = coins[type].rpcs[Math.floor(Math.random()*coins[type].rpcs.length)];
-        const provider = new ethers.providers.JsonRpcProvider(rpc as any);
 
-        return provider;
+        if (coins[type].type === 'evm') {
+            const provider = new ethers.providers.JsonRpcProvider(rpc as any);
+            return provider;
+        }
+        if (coins[type].type === 'tezos') { // tezos provider
+            const tezos = new Sotez(rpc.url, {
+                defaultFee: 1420,
+                useMutez: true,
+                useLimitEstimator: true,
+                chainId: 'main',
+                debugMode: false,
+                localForge: true,
+                validateLocalForge: false,
+            });
+            return tezos;
+        }
+        return undefined;
     }
 
     private getRandomAccount(type: string) {
