@@ -4,6 +4,7 @@ import { BashService } from 'src/shared/bash.service';
 import { PluginsService } from './plugins.service';
 import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PropertiesService } from 'src/shared/storage/properties.service';
+import { environment } from 'src/environment';
 
 @ApiTags('Plugins')
 @Controller('plugins')
@@ -107,6 +108,19 @@ export class PluginsController {
                 description: 'Running plugin installation.'
             };
 
+            if (!this.pluginsService.plugins[pluginId].exists()) {
+                plugin.installed = false;
+                plugin.ready = false;
+                delete plugin.version;
+                this.propertiesService.save();
+                // plateform not supported.
+                this.runningTasks[taskId] = {
+                    status: 'ERROR',
+                    description: `Platform ${environment.platformId} not supported.`
+                };
+                return ;
+            }
+
             this.runCommandToPlugin(pluginId, {
                 key: 'install',
                 ... body
@@ -156,6 +170,20 @@ export class PluginsController {
             status: 'UNINSTALLING',
             description: 'Uninstalling'
         };
+
+        // if plugin was removed manually xD
+        if (!this.pluginsService.plugins[pluginId].exists()) {
+            let plugin = this.propertiesService.getProperty('plugins', []).find(x => x.id == pluginId);
+            plugin.ready = false;
+            delete plugin.version;
+            plugin.installed = false;
+            this.propertiesService.save();
+            this.runningTasks[taskId] = {
+                status: 'FINISHED',
+                description: 'Uninstalled succesfully.'
+            };
+            return { taskId: taskId };
+        }
 
         this.runCommandToPlugin(pluginId, {
             key: 'uninstall',
@@ -235,6 +263,15 @@ export class PluginsController {
             this.propertiesService.save();
 
             await this.pluginsService.loadInstalledPlugins();
+
+            if (!this.pluginsService.plugins[pluginId].exists()) {
+                // plateform not supported.
+                this.runningTasks[taskId] = {
+                    status: 'ERROR',
+                    description: `Platform ${environment.platformId} not supported.`
+                };
+                return ;
+            }
             
             this.runningTasks[taskId] = {
                 status: 'FINISHED',

@@ -38,18 +38,27 @@ export class PluginsService {
             if (this.plugins[plugin.id] == undefined && plugin.packageName != undefined) {
                 this.plugins[plugin.id] = {
                     ... plugin,
+                    exists: () => {
+                        const commandPath = path.join(environment.globalNodeModulesDirectory, `${plugin.packageName}/dist/${environment.platformId}/${plugin.id}`);
+                        return fs.existsSync(commandPath);
+                    },
                     exec: async (argObject) => {
                         return await new Promise((resolve) => {
                             // double stringify for escapes double quotes
                             const commandPath = path.join(environment.globalNodeModulesDirectory, `${plugin.packageName}/dist/${environment.platformId}/${plugin.id}`);
 
                             exec(`${commandPath} ${JSON.stringify(JSON.stringify(argObject))}`, (error, stdout, stderr) => {
-                                const result = JSON.parse(stdout);
+                                try {
+                                    const result = JSON.parse(stdout);
     
-                                resolve({
-                                    result: JSON.parse(result.jsonResult),
-                                    stdOut: result.stdOut
-                                });
+                                    resolve({
+                                        result: JSON.parse(result.jsonResult),
+                                        stdOut: result.stdOut
+                                    });
+                                } catch (e) {
+                                    console.log(e);
+                                    resolve({ result: undefined, stdOut: stdout });
+                                }
                             });
                         });
                     }
@@ -149,6 +158,7 @@ export class PluginsService {
             }
         }
         this.propertiesService.setProperty('plugins', internalPlugins);
+        this.propertiesService.save();
     }
 
     private async getListOfPlugins() {

@@ -6,6 +6,8 @@ import xml2js from 'xml2js';
  * Upnp Service
  * 
  * Service used for manage ports of the local smtp
+ * 
+ * doc: http://upnp.org/specs/gw/UPnP-gw-WANIPConnection-v2-Service.pdf
  */
 @Injectable()
 export class UpnpService {
@@ -54,7 +56,7 @@ export class UpnpService {
             port: number,
             protocol: string = 'TCP',
             description: string = 'keepix-upnp',
-            ttl: number = 60 * 30
+            ttl: number = 604800 // maximum ttl
         ) {
         const { gateway, address } = await this.findGateway();
         return await this.run('AddPortMapping', `<NewRemoteHost>${address}</NewRemoteHost><NewExternalPort>${port}</NewExternalPort><NewProtocol>${protocol}</NewProtocol><NewInternalPort>${port}</NewInternalPort><NewInternalClient>${address}</NewInternalClient><NewEnabled>1</NewEnabled><NewPortMappingDescription>${description}</NewPortMappingDescription><NewLeaseDuration>${ttl}</NewLeaseDuration>`);
