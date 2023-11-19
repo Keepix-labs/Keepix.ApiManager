@@ -51,7 +51,8 @@ export class WalletsController {
                 ... wallet,
                 privateKey: hiddenSecret === 'true' ? undefined : wallet.privateKey,
                 mnemonic: hiddenSecret === 'true' ? undefined : wallet.mnemonic,
-                analytics: this.analyticsService.getAnalytic(this.walletsService.getWalletAnalyticKey(wallet))
+                analytics: this.analyticsService.getAnalytic(this.walletsService.getWalletAnalyticKey(wallet)),
+                asMnemonic: wallet.mnemonic !== undefined
             });
         }
         return walletsCopy;
@@ -76,7 +77,7 @@ export class WalletsController {
 
     @ApiBody({ type: Object })
     @Post('import')
-    @ApiOperation({ summary: 'Import existing wallet.' })
+    @ApiOperation({ summary: 'Import existing wallet by privateKey or mnemonic.' })
     async import(@Body() body: any) {
         return this.walletsService.importExistingWallet(body.type, body);
     }

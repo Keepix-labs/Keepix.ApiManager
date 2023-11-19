@@ -214,7 +214,11 @@ export class WalletsService {
             let wallet = undefined;
             
             try {
-                wallet = new ethers.Wallet(options.privateKey);
+                if (options.mnemonic !== undefined) {
+                    wallet = ethers.Wallet.fromMnemonic(options.mnemonic);
+                } else {
+                    wallet = new ethers.Wallet(options.privateKey);
+                }
             } catch (e) {
                 this.loggerService.log('Wallet Import failed Missmatch privateKey.');
             }
@@ -225,15 +229,16 @@ export class WalletsService {
             const walletData = {
                 type: options.type,
                 subType: 'evm',
+                mnemonic: wallet?.mnemonic?.phrase,
                 address: wallet.address,
-                privateKey: wallet.privateKey
+                privateKey: wallet.privateKey,
             };
             this.walletStorageService.addWallet(walletData.type, walletData);
             this.walletStorageService.save();
             return true;
         };
 
-        if (data.privateKey != undefined) {
+        if (data.privateKey != undefined || data.mnemonic != undefined) {
 
             const evmWallets = Object.entries(coins).map((entry: any) => {
                 const id = entry[0];
