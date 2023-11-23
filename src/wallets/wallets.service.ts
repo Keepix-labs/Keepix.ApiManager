@@ -11,6 +11,8 @@ import { AnalyticsService } from "src/shared/storage/analytics.service";
 import { coins, tokens } from "keepix-tokens";
 import { getUniswapV3AmountOut } from "src/shared/utils/get-uniswap-v3-amount-out";
 import { Sotez, cryptoUtils } from 'sotez';
+import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
+import { StargateClient } from "@cosmjs/stargate";
 
 const TEZOS_DERIVATION_PATH = "m/44'/1729'/0'/0'";
 
@@ -110,6 +112,11 @@ export class WalletsService {
             const balanceInWei = await tezos.getBalance(wallet.address);
             const balance = ethers.utils.formatUnits(BigNumber.from(`${balanceInWei}`), 6);
             wallet.balance = (Number(balance).toFixed(8));
+        } else if (coin.type === 'cosmos') {
+            const cosmosClient: StargateClient = await this.getProvider(wallet.type);
+            const balanceInformation = await cosmosClient.getBalance(wallet.address, 'uatom');
+            const balance = ethers.utils.formatUnits(BigNumber.from(`${balanceInformation.amount}`), 6);
+            wallet.balance = (Number(balance).toFixed(8));
         }
 
         // todo only if wallet have positive balance
@@ -196,6 +203,19 @@ export class WalletsService {
                 const privateKey = new bitcore.PrivateKey();
                 const walletData = {
                     type: 'bitcoin',
+                    subType: 'bitcoin',
+                    address: privateKey.toAddress().toString(),
+                    privateKey: privateKey.toObject()
+                };
+                this.walletStorageService.addWallet(walletData.type, walletData);
+                this.walletStorageService.save();
+                return { success: true, description: 'Wallet Generated Succesfully.' };
+            },
+            'bitcoin-cash': async (options) => {
+                const privateKey = new bitcore.PrivateKey();
+                const walletData = {
+                    type: 'bitcoin-cash',
+                    subType: 'bitcoin',
                     address: privateKey.toAddress().toString(),
                     privateKey: privateKey.toObject()
                 };
@@ -210,6 +230,7 @@ export class WalletsService {
                 //{ address, privateKey, mnemonic } as TezosWallet
                 const walletData = {
                     type: 'tezos',
+                    subType: 'tezos',
                     address: address,
                     privateKey: privateKey,
                     mnemonic: mnemonic
@@ -217,6 +238,21 @@ export class WalletsService {
                 this.walletStorageService.addWallet(walletData.type, walletData);
                 this.walletStorageService.save();
                 return { success: true, description: 'Wallet Generated Succesfully.' };
+            },
+            'cosmos': async (options) => {
+                const wallet: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.generate(24);
+                const accounts = await wallet.getAccounts();
+
+                const walletData = {
+                    type: 'cosmos',
+                    subType: 'cosmos',
+                    address: accounts[0].address,
+                    privateKey: wallet.serialize(""),
+                    mnemonic: wallet.mnemonic
+                };
+                this.walletStorageService.addWallet(walletData.type, walletData);
+                this.walletStorageService.save();
+                return { success: true, description: 'Cosmos Wallet Generated Succesfully.' };
             },
             ... evmWallets
         };
@@ -313,6 +349,44 @@ export class WalletsService {
                     this.walletStorageService.addWallet(walletData.type, walletData);
                     this.walletStorageService.save();
                     return { success: true, description: 'Wallet Imported Succesfully.' };
+                },
+                'cosmos': async (options) => {
+                    let wallet = undefined;
+                    try {
+                        if (options.mnemonic !== undefined) {
+                            const walletRetrieved: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.fromMnemonic(options.mnemonic);
+                            wallet = {
+                                mnemonic: options.mnemonic,
+                                privateKey: walletRetrieved.serialize(""),
+                                address: (await walletRetrieved.getAccounts())[0].address
+                            };
+                        } else {
+                            const walletRetrieved: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.deserialize(options.privateKey, "");
+                            wallet = {
+                                mnemonic: options.mnemonic,
+                                privateKey: walletRetrieved.serialize(""),
+                                address: (await walletRetrieved.getAccounts())[0].address
+                            };
+                        }
+                    } catch (e) {
+                        this.loggerService.log('Wallet Import failed Missmatch privateKey or mnemonic.');
+                    }
+
+                    if (wallet == undefined) {
+                        return { success: false, description: 'Wallet Import Cosmos failed Missmatch privateKey or mnemonic.' };
+                    }
+                    if (this.walletStorageService.existsWallet(options.type, wallet.address)) {
+                        return { success: false, description: 'Wallet Cosmos Already Exists.' };
+                    }
+                    const walletData = {
+                        type: 'cosmos',
+                        address: wallet.address,
+                        privateKey: wallet.privateKey,
+                        mnemonic: wallet.mnemonic
+                    };
+                    this.walletStorageService.addWallet(walletData.type, walletData);
+                    this.walletStorageService.save();
+                    return { success: true, description: 'Cosmos Wallet Imported Succesfully.' };
                 },
                 ... evmWallets
             };
@@ -550,12 +624,13 @@ export class WalletsService {
     }
 
     private getProvider(type: string): any {
+        let overridedRpc: any = undefined;
         // override rpc by config
         if (this.propertiesService.getProperty("rpcs") !== undefined) {
             const rpcs = this.propertiesService.getProperty("rpcs");
-            if (typeof rpcs === 'object' && rpcs[type] !== undefined) {
-                const provider = new ethers.providers.JsonRpcProvider(rpcs[type] as any);
-                return provider;
+            const foundRpc = rpcs.find(x => x.type === type);
+            if (foundRpc !== undefined && typeof foundRpc === 'object') {
+                overridedRpc = foundRpc;
             }
         }
         if (coins[type] === undefined) {
@@ -567,13 +642,22 @@ export class WalletsService {
         if (coins[type].rpcs.length === 0) {
             return undefined;
         }
-        const rpc = coins[type].rpcs[Math.floor(Math.random()*coins[type].rpcs.length)];
+        let rpc = coins[type].rpcs[Math.floor(Math.random()*coins[type].rpcs.length)];
 
         if (coins[type].type === 'evm') {
+            if (overridedRpc !== undefined
+                && overridedRpc.chainId !== undefined
+                && overridedRpc.url !== undefined && overridedRpc.url !== '') {
+                rpc = overridedRpc;
+            }
             const provider = new ethers.providers.JsonRpcProvider(rpc as any);
             return provider;
         }
         if (coins[type].type === 'tezos') { // tezos provider
+            if (overridedRpc !== undefined
+                && overridedRpc.url !== undefined && overridedRpc.url !== '') {
+                rpc = overridedRpc;
+            }
             const tezos = new Sotez(rpc.url, {
                 defaultFee: 1420,
                 useMutez: true,
@@ -584,6 +668,14 @@ export class WalletsService {
                 validateLocalForge: false,
             });
             return tezos;
+        }
+        if (coins[type].type === 'cosmos') { // cosmos provider
+            if (overridedRpc !== undefined
+                && overridedRpc.url !== undefined && overridedRpc.url !== '') {
+                rpc = overridedRpc;
+            }
+            const client = StargateClient.connect(rpc.url);
+            return client;
         }
         return undefined;
     }
