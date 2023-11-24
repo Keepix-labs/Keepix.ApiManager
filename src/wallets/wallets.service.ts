@@ -13,6 +13,8 @@ import { getUniswapV3AmountOut } from "src/shared/utils/get-uniswap-v3-amount-ou
 import { Sotez, cryptoUtils } from 'sotez';
 import { DirectSecp256k1HdWallet } from "@cosmjs/proto-signing";
 import { StargateClient } from "@cosmjs/stargate";
+import { DefaultProviderUrls, Client as MassaClient, ClientFactory as MassaClientFactory, WalletClient as MassaWalletClient, ProviderType } from '@massalabs/massa-web3';
+import { Wallet as XrplWallet, Client as XrplClient } from 'xrpl';
 
 const TEZOS_DERIVATION_PATH = "m/44'/1729'/0'/0'";
 
@@ -117,6 +119,21 @@ export class WalletsService {
             const balanceInformation = await cosmosClient.getBalance(wallet.address, 'uatom');
             const balance = ethers.utils.formatUnits(BigNumber.from(`${balanceInformation.amount}`), 6);
             wallet.balance = (Number(balance).toFixed(8));
+        } else if (coin.type === 'massa') {
+            const massaProviderFn = this.getProvider(wallet.type);
+            const client: MassaClient = await massaProviderFn(wallet.privateKey);
+            const balanceInformation = await client.wallet().getAccountBalance(wallet.address);
+            const balance = ethers.utils.formatUnits(BigNumber.from(`${balanceInformation.final}`), 9);
+            wallet.balance = (Number(balance).toFixed(8));
+        } else if (coin.type === 'xrp') {
+            try {
+                const xrpProviderFn = this.getProvider(wallet.type);
+                const client: XrplClient = await xrpProviderFn();
+                const balanceInformation = await client.getXrpBalance(wallet.address);
+                wallet.balance = (Number(balanceInformation).toFixed(8));
+            } catch (e) { // Account not found.
+                wallet.balance(Number('0').toFixed(8));
+            }
         }
 
         // todo only if wallet have positive balance
@@ -198,11 +215,11 @@ export class WalletsService {
         .filter(x => x !== undefined)
         .reduce((acc: any, w) => { acc[w.key] = w.value; return acc; }, {});
 
-        const generativeWalletFunctions = {
-            'bitcoin': async (options) => {
+        const getBitcoinGenerateFn = (type) => {
+            return async (options) => {
                 const privateKey = new bitcore.PrivateKey();
                 const walletData = {
-                    type: 'bitcoin',
+                    type: type,
                     subType: 'bitcoin',
                     address: privateKey.toAddress().toString(),
                     privateKey: privateKey.toObject()
@@ -210,50 +227,89 @@ export class WalletsService {
                 this.walletStorageService.addWallet(walletData.type, walletData);
                 this.walletStorageService.save();
                 return { success: true, description: 'Wallet Generated Succesfully.' };
-            },
-            'bitcoin-cash': async (options) => {
-                const privateKey = new bitcore.PrivateKey();
+            };
+        };
+
+        const tezosGenerateFn = async (options) => {
+            const mnemonic = cryptoUtils.generateMnemonic();
+            const { sk: privateKey } = await cryptoUtils.generateKeys(mnemonic, undefined, TEZOS_DERIVATION_PATH);
+            const { pkh: address } = await cryptoUtils.extractKeys(privateKey);
+            //{ address, privateKey, mnemonic } as TezosWallet
+            const walletData = {
+                type: 'tezos',
+                subType: 'tezos',
+                address: address,
+                privateKey: privateKey,
+                mnemonic: mnemonic
+            };
+            this.walletStorageService.addWallet(walletData.type, walletData);
+            this.walletStorageService.save();
+            return { success: true, description: 'Wallet Generated Succesfully.' };
+        };
+
+        const cosmosGenerateFn = async (options) => {
+            const wallet: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.generate(24);
+            const accounts = await wallet.getAccounts();
+
+            const walletData = {
+                type: 'cosmos',
+                subType: 'cosmos',
+                address: accounts[0].address,
+                privateKey: wallet.serialize(""),
+                mnemonic: wallet.mnemonic
+            };
+            this.walletStorageService.addWallet(walletData.type, walletData);
+            this.walletStorageService.save();
+            return { success: true, description: 'Cosmos Wallet Generated Succesfully.' };
+        };
+
+        const getMassaGenerateFn = (type) => {
+            return async (options) => {
+                const wallet = await MassaWalletClient.walletGenerateNewAccount();
+
                 const walletData = {
-                    type: 'bitcoin-cash',
-                    subType: 'bitcoin',
-                    address: privateKey.toAddress().toString(),
-                    privateKey: privateKey.toObject()
+                    type: type,
+                    subType: 'massa',
+                    address: wallet.address,
+                    publicKey: wallet.publicKey,
+                    privateKey: wallet.secretKey
                 };
                 this.walletStorageService.addWallet(walletData.type, walletData);
                 this.walletStorageService.save();
-                return { success: true, description: 'Wallet Generated Succesfully.' };
-            },
-            'tezos': async (options) => {
-                const mnemonic = cryptoUtils.generateMnemonic();
-                const { sk: privateKey } = await cryptoUtils.generateKeys(mnemonic, undefined, TEZOS_DERIVATION_PATH);
-                const { pkh: address } = await cryptoUtils.extractKeys(privateKey);
-                //{ address, privateKey, mnemonic } as TezosWallet
+                return { success: true, description: 'Massa Wallet Generated Succesfully.' };
+            }
+        };
+
+        const getXrpGenerateFn = (type) => {
+            return async (options) => {
+                const bip39 = require('bip39');
+                const numberOfWords = 24;
+                const mnemonic = bip39.generateMnemonic((numberOfWords * 32) / 3);
+                const wallet = XrplWallet.fromMnemonic(mnemonic);
+
                 const walletData = {
-                    type: 'tezos',
-                    subType: 'tezos',
-                    address: address,
-                    privateKey: privateKey,
+                    type: type,
+                    subType: 'xrp',
+                    address: wallet.address,
+                    publicKey: wallet.publicKey,
+                    privateKey: wallet.privateKey,
                     mnemonic: mnemonic
                 };
                 this.walletStorageService.addWallet(walletData.type, walletData);
                 this.walletStorageService.save();
-                return { success: true, description: 'Wallet Generated Succesfully.' };
-            },
-            'cosmos': async (options) => {
-                const wallet: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.generate(24);
-                const accounts = await wallet.getAccounts();
+                return { success: true, description: 'XRP Wallet Generated Succesfully.' };
+            };
+        };
 
-                const walletData = {
-                    type: 'cosmos',
-                    subType: 'cosmos',
-                    address: accounts[0].address,
-                    privateKey: wallet.serialize(""),
-                    mnemonic: wallet.mnemonic
-                };
-                this.walletStorageService.addWallet(walletData.type, walletData);
-                this.walletStorageService.save();
-                return { success: true, description: 'Cosmos Wallet Generated Succesfully.' };
-            },
+        const generativeWalletFunctions = {
+            'bitcoin': getBitcoinGenerateFn('bitcoin'),
+            'bitcoin-cash': getBitcoinGenerateFn('bitcoin-cash'),
+            'tezos': tezosGenerateFn,
+            'cosmos': cosmosGenerateFn,
+            'massa': getMassaGenerateFn('massa'),
+            'massa-testnet': getMassaGenerateFn('massa-testnet'),
+            'massa-buildnet': getMassaGenerateFn('massa-buildnet'),
+            'xrp': getXrpGenerateFn('xrp'),
             ... evmWallets
         };
 
@@ -310,84 +366,169 @@ export class WalletsService {
                 return undefined;
             })
             .filter(x => x !== undefined)
-            .reduce((acc: any, w) => { acc[w.key] = w.value; return acc; }, {});;
+            .reduce((acc: any, w) => { acc[w.key] = w.value; return acc; }, {});
+
+            const tezosFn = async (options) => {
+                let wallet = undefined;
+                try {
+                    if (options.mnemonic !== undefined) {
+                        const { sk: privateKey } = await cryptoUtils.generateKeys(options.mnemonic, undefined, TEZOS_DERIVATION_PATH);
+                        const { pkh: address } = await cryptoUtils.extractKeys(privateKey);
+                        wallet = {
+                            mnemonic: options.mnemonic,
+                            privateKey: privateKey,
+                            address: address
+                        };
+                    } else {
+                        const { pkh: address } = await cryptoUtils.extractKeys(options.privateKey);
+                        wallet = {
+                            privateKey: options.privateKey,
+                            address: address
+                        };
+                    }
+                } catch (e) {
+                    this.loggerService.log('Wallet Import failed Missmatch privateKey or mnemonic.');
+                }
+                if (wallet == undefined) {
+                    return { success: false, description: 'Wallet Import failed Missmatch privateKey or mnemonic.' };
+                }
+                if (this.walletStorageService.existsWallet(options.type, wallet.address)) {
+                    return { success: false, description: 'Wallet Already Exists.' };
+                }
+                const walletData = {
+                    type: 'tezos',
+                    subType: 'tezos',
+                    address: wallet.address,
+                    privateKey: wallet.privateKey,
+                    mnemonic: wallet.mnemonic
+                };
+                this.walletStorageService.addWallet(walletData.type, walletData);
+                this.walletStorageService.save();
+                return { success: true, description: 'Wallet Imported Succesfully.' };
+            };
+
+            const cosmosFn = async (options) => {
+                let wallet = undefined;
+                try {
+                    if (options.mnemonic !== undefined) {
+                        const walletRetrieved: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.fromMnemonic(options.mnemonic);
+                        wallet = {
+                            mnemonic: options.mnemonic,
+                            privateKey: walletRetrieved.serialize(""),
+                            address: (await walletRetrieved.getAccounts())[0].address
+                        };
+                    } else {
+                        const walletRetrieved: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.deserialize(options.privateKey, "");
+                        wallet = {
+                            privateKey: walletRetrieved.serialize(""),
+                            address: (await walletRetrieved.getAccounts())[0].address
+                        };
+                    }
+                } catch (e) {
+                    this.loggerService.log('Wallet Import failed Missmatch privateKey or mnemonic.');
+                }
+
+                if (wallet == undefined) {
+                    return { success: false, description: 'Wallet Import Cosmos failed Missmatch privateKey or mnemonic.' };
+                }
+                if (this.walletStorageService.existsWallet(options.type, wallet.address)) {
+                    return { success: false, description: 'Wallet Cosmos Already Exists.' };
+                }
+                const walletData = {
+                    type: 'cosmos',
+                    subType: 'cosmos',
+                    address: wallet.address,
+                    privateKey: wallet.privateKey,
+                    mnemonic: wallet.mnemonic
+                };
+                this.walletStorageService.addWallet(walletData.type, walletData);
+                this.walletStorageService.save();
+                return { success: true, description: 'Cosmos Wallet Imported Succesfully.' };
+            };
+
+            const getMassaFn = (type) => {
+                return async (options) => {
+                    let wallet = undefined;
+                    try {
+                        const walletRetrieved = await MassaWalletClient.getAccountFromSecretKey(options.privateKey);
+                        wallet = {
+                            privateKey: walletRetrieved.secretKey,
+                            address: walletRetrieved.address,
+                            publicKey: walletRetrieved.publicKey
+                        };
+                    } catch (e) {
+                        this.loggerService.log('Massa Wallet Import failed Missmatch privateKey.');
+                    }
+                    if (wallet == undefined) {
+                        return { success: false, description: 'Massa Wallet Import failed Missmatch privateKey.' };
+                    }
+                    if (this.walletStorageService.existsWallet(type, wallet.address)) {
+                        return { success: false, description: 'Massa Wallet Already Exists.' };
+                    }
+                    const walletData = {
+                        type: type,
+                        subType: 'massa',
+                        address: wallet.address,
+                        privateKey: wallet.privateKey,
+                        publicKey: wallet.publicKey
+                    };
+                    this.walletStorageService.addWallet(walletData.type, walletData);
+                    this.walletStorageService.save();
+                    return { success: true, description: 'Massa Wallet Imported Succesfully.' };
+                };
+            };
+
+            const getXrpFn = (type) => {
+                return async (options) => {
+                    let wallet = undefined;
+                    try {
+                        if (options.mnemonic) {
+                            const walletRetrieved = XrplWallet.fromMnemonic(options.mnemonic);
+                            wallet = {
+                                privateKey: walletRetrieved.privateKey,
+                                address: walletRetrieved.address,
+                                publicKey: walletRetrieved.publicKey,
+                                mnemonic: options.mnemonic
+                            };
+                        } else if (options.publicKey && options.privateKey) {
+                            const walletRetrieved = new XrplWallet(options.publicKey, options.privateKey);
+                            wallet = {
+                                privateKey: walletRetrieved.privateKey,
+                                address: walletRetrieved.address,
+                                publicKey: walletRetrieved.publicKey,
+                                mnemonic: options.mnemonic
+                            };
+                        }
+                    } catch (e) {
+                        this.loggerService.log('Xrp Wallet Import failed Missmatch publicKey+privateKey or mnemonic.');
+                    }
+                    if (wallet == undefined) {
+                        return { success: false, description: 'Xrp Wallet Import failed Missmatch publicKey+privateKey or mnemonic.' };
+                    }
+                    if (this.walletStorageService.existsWallet(type, wallet.address)) {
+                        return { success: false, description: 'Xrp Wallet Already Exists.' };
+                    }
+                    const walletData = {
+                        type: type,
+                        subType: 'xrp',
+                        address: wallet.address,
+                        privateKey: wallet.privateKey,
+                        publicKey: wallet.publicKey,
+                        mnemonic: wallet.mnemonic
+                    };
+                    this.walletStorageService.addWallet(walletData.type, walletData);
+                    this.walletStorageService.save();
+                    return { success: true, description: 'Xrp Wallet Imported Succesfully.' };
+                };
+            };
 
             const importWalletViaPrivateKeyFunctions = {
-                'tezos': async (options) => {
-                    let wallet = undefined;
-                    try {
-                        if (options.mnemonic !== undefined) {
-                            const { sk: privateKey } = await cryptoUtils.generateKeys(options.mnemonic, undefined, TEZOS_DERIVATION_PATH);
-                            const { pkh: address } = await cryptoUtils.extractKeys(privateKey);
-                            wallet = {
-                                mnemonic: options.mnemonic,
-                                privateKey: privateKey,
-                                address: address
-                            };
-                        } else {
-                            const { pkh: address } = await cryptoUtils.extractKeys(options.privateKey);
-                            wallet = {
-                                privateKey: options.privateKey,
-                                address: address
-                            };
-                        }
-                    } catch (e) {
-                        this.loggerService.log('Wallet Import failed Missmatch privateKey or mnemonic.');
-                    }
-                    if (wallet == undefined) {
-                        return { success: false, description: 'Wallet Import failed Missmatch privateKey or mnemonic.' };
-                    }
-                    if (this.walletStorageService.existsWallet(options.type, wallet.address)) {
-                        return { success: false, description: 'Wallet Already Exists.' };
-                    }
-                    const walletData = {
-                        type: 'tezos',
-                        address: wallet.address,
-                        privateKey: wallet.privateKey,
-                        mnemonic: wallet.mnemonic
-                    };
-                    this.walletStorageService.addWallet(walletData.type, walletData);
-                    this.walletStorageService.save();
-                    return { success: true, description: 'Wallet Imported Succesfully.' };
-                },
-                'cosmos': async (options) => {
-                    let wallet = undefined;
-                    try {
-                        if (options.mnemonic !== undefined) {
-                            const walletRetrieved: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.fromMnemonic(options.mnemonic);
-                            wallet = {
-                                mnemonic: options.mnemonic,
-                                privateKey: walletRetrieved.serialize(""),
-                                address: (await walletRetrieved.getAccounts())[0].address
-                            };
-                        } else {
-                            const walletRetrieved: DirectSecp256k1HdWallet = await DirectSecp256k1HdWallet.deserialize(options.privateKey, "");
-                            wallet = {
-                                mnemonic: options.mnemonic,
-                                privateKey: walletRetrieved.serialize(""),
-                                address: (await walletRetrieved.getAccounts())[0].address
-                            };
-                        }
-                    } catch (e) {
-                        this.loggerService.log('Wallet Import failed Missmatch privateKey or mnemonic.');
-                    }
-
-                    if (wallet == undefined) {
-                        return { success: false, description: 'Wallet Import Cosmos failed Missmatch privateKey or mnemonic.' };
-                    }
-                    if (this.walletStorageService.existsWallet(options.type, wallet.address)) {
-                        return { success: false, description: 'Wallet Cosmos Already Exists.' };
-                    }
-                    const walletData = {
-                        type: 'cosmos',
-                        address: wallet.address,
-                        privateKey: wallet.privateKey,
-                        mnemonic: wallet.mnemonic
-                    };
-                    this.walletStorageService.addWallet(walletData.type, walletData);
-                    this.walletStorageService.save();
-                    return { success: true, description: 'Cosmos Wallet Imported Succesfully.' };
-                },
+                'tezos': tezosFn,
+                'cosmos': cosmosFn,
+                'massa': getMassaFn('massa'),
+                'massa-testnet': getMassaFn('massa-testnet'),
+                'massa-buildnet': getMassaFn('massa-buildnet'),
+                'xrp': getXrpFn('xrp'),
                 ... evmWallets
             };
 
@@ -676,6 +817,30 @@ export class WalletsService {
             }
             const client = StargateClient.connect(rpc.url);
             return client;
+        }
+        if (coins[type].type === 'massa') { // massa provider
+            if (overridedRpc !== undefined
+                && overridedRpc.url !== undefined && overridedRpc.url !== '') {
+                rpc = overridedRpc;
+            }
+            return async (privateKey) => {
+                const baseAccount: any = await MassaWalletClient.getAccountFromSecretKey(privateKey);
+                return MassaClientFactory.createCustomClient([{
+                    url: rpc.url,
+                    type: ProviderType.PUBLIC
+                }], true, baseAccount);
+            };
+        }
+        if (coins[type].type === 'xrp') {
+            if (overridedRpc !== undefined
+                && overridedRpc.url !== undefined && overridedRpc.url !== '') {
+                rpc = overridedRpc;
+            }
+            return async () => {
+                const client = new XrplClient(rpc.url);
+                await client.connect();
+                return client;
+            };
         }
         return undefined;
     }

@@ -1,6 +1,6 @@
 {
     "name": "keepix.server",
-    "version": "0.0.164",
+    "version": "0.0.165",
     "description": "",
     "author": "",
     "private": true,
@@ -23,11 +23,13 @@
         "@cosmjs/proto-signing": "^0.32.0",
         "@cosmjs/stargate": "^0.32.0",
         "@ethersproject/hdnode": "^5.7.0",
+        "@massalabs/massa-web3": "^2.2.6",
         "@nestjs/common": "^10.0.0",
         "@nestjs/core": "^10.0.0",
         "@nestjs/platform-express": "^10.0.0",
         "@nestjs/swagger": "^7.1.11",
         "@silentbot1/nat-api": "^0.4.7",
+        "bip39": "^3.1.0",
         "bitcore-lib": "^10.0.17",
         "check-disk-space": "^3.4.0",
         "class-transformer": "^0.5.1",
@@ -42,7 +44,7 @@
         "increase-build-package-public-directory": "^0.0.3",
         "keepix-application-interface-build": "^0.0.32",
         "keepix-ssh": "^0.4.22",
-        "keepix-tokens": "^0.0.11",
+        "keepix-tokens": "^0.0.19",
         "moment": "^2.29.4",
         "nocache": "^4.0.0",
         "node-fetch": "^2.7.0",
@@ -51,7 +53,8 @@
         "reflect-metadata": "^0.1.13",
         "rxjs": "^7.8.1",
         "sotez": "^13.0.1",
-        "wireless-tools": "^0.19.0"
+        "wireless-tools": "^0.19.0",
+        "xrpl": "^2.13.0"
     },
     "devDependencies": {
         "@nestjs/cli": "^10.0.0",

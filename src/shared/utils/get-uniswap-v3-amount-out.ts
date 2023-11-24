@@ -23,6 +23,6 @@ export const getUniswapV3AmountOut = async (tokenA, tokenADecimals, tokenB, toke
     // prix d'une unité du token 0 en token 1
     // const priceInToken0 = 1 / priceInToken1;
     // si amountIn et en token 0
-    const amountOut = amountIn.mul(ethers.utils.parseUnits(priceInToken1.toFixed(18), tokenADecimals)).div(ethers.utils.parseUnits('1', tokenBDecimals));
-    return ethers.utils.formatUnits(amountOut.toString(), tokenBDecimals);
+    const amountOut = amountIn.mul(ethers.utils.parseUnits(priceInToken1.toFixed(18), tokenADecimals)).div(ethers.utils.parseUnits('1', tokenADecimals));
+    return ethers.utils.formatUnits(amountOut.toString(), tokenADecimals);
 };
